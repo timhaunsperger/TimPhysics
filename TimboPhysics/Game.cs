@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using static OpenTK.Mathematics.MathHelper;
@@ -12,45 +13,23 @@ namespace TimboPhysics;
 
 public class Game : GameWindow
 {
-    private List<float[]> _vertices = new List<float[]>();
-    float[] _vertices0 = {
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f, //top right back     0
-         0.5f, -0.5f, -0.5f,  0.0f, 0.0f, //bottom right back  1
-        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, //bottom left back   2
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, //top left back      3
+    float[,] _vertices = {
+        {0.5f,  0.5f, -0.5f,  1.0f, 1.0f}, //top right back     0
+        {0.5f, -0.5f, -0.5f,  0.0f, 0.0f}, //bottom right back  1
+        {-0.5f, -0.5f, -0.5f,  1.0f, 0.0f}, //bottom left back   2
+        {-0.5f,  0.5f, -0.5f,  0.0f, 1.0f}, //top left back      3
         
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f, //top right front    4
-         0.5f, -0.5f,  0.5f,  0.0f, 1.0f, //bottom right front 5
-        -0.5f, -0.5f,  0.5f,  1.0f, 1.0f, //bottom left front  6
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, //top left front     7
+        {0.5f,  0.5f,  0.5f,  1.0f, 0.0f}, //top right front    4
+        {0.5f, -0.5f,  0.5f,  0.0f, 1.0f}, //bottom right front 5
+        {-0.5f, -0.5f,  0.5f,  1.0f, 1.0f}, //bottom left front  6
+        {-0.5f,  0.5f,  0.5f,  0.0f, 0.0f}, //top left front     7
     };
     
-    float[] _vertices1 = {
-        0.5f,  0.5f, -0.5f,  1.0f, 1.0f, //top right back     0
-        0.5f, -0.5f, -0.5f,  0.0f, 0.0f, //bottom right back  1
-        0.5f,  0.5f,  0.5f,  1.0f, 0.0f, //top right front    4
-        0.5f, -0.5f,  0.5f,  0.0f, 1.0f, //bottom right front 5
-        
-        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, //bottom left back   2
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, //top left back      3
-        -0.5f, -0.5f,  0.5f,  1.0f, 1.0f, //bottom left front  6
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, //top left front     7
-    };
+    static float X=0.525731112119133606f;
+    static float Z=0.850650808352039932f;
+    static float N=0f;
     
-    float[] _vertices2 = {
-        0.5f,  0.5f, -0.5f,  1.0f, 1.0f, //top right back     0
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, //top left back      3
-        0.5f,  0.5f,  0.5f,  1.0f, 0.0f, //top right front    4
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, //top left front     7
-        
-         0.5f, -0.5f,  0.5f,  0.0f, 1.0f, //bottom right front 5
-         0.5f, -0.5f, -0.5f,  0.0f, 0.0f, //bottom right back  1
-        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, //bottom left back   2
-        -0.5f, -0.5f,  0.5f,  1.0f, 1.0f, //bottom left front  6
-        
-    };
-    
-    uint[] _indices = {  // note that we start from 0!
+    uint[] _indices = {
         0, 1, 2,
         2, 3, 0,
         0, 1, 5,
@@ -65,12 +44,8 @@ public class Game : GameWindow
         5, 6, 2
     };
 
-    private int[] _VBOs = new int[200];
-    private int _EBO;
-    private int _VAO;
+    private List<RenderObject> _renderObjects = new ();
     private Shader _shader;
-    private Texture _texture0;
-    private Texture _texture1;
     private Stopwatch _timer;
     private float _AspectRatio = 1;
     private Camera _camera;
@@ -85,54 +60,41 @@ public class Game : GameWindow
 
     protected override void OnLoad()
     {
-        _vertices.Add(_vertices0);
         _timer = new Stopwatch();
         _timer.Start();
         GL.Enable(EnableCap.DepthTest);
         GL.ClearColor(new Color4(0.2f,0.2f,1f,1f));
-
-        _VAO = GL.GenVertexArray();
-        GL.BindVertexArray(_VAO);
-
-        GL.GenBuffers(1, _VBOs);
-
-        for (int i = 0; i < _vertices.Count; i++)
-        {
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _VBOs[i]);
-            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float)*_vertices[i].Length, _vertices[i], BufferUsageHint.StaticDraw);
-        }
-        
-        GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
-        
-        _EBO = GL.GenBuffer();
-        GL.BindBuffer(BufferTarget.ElementArrayBuffer, _EBO);
-        GL.BufferData(BufferTarget.ElementArrayBuffer, _indices.Length * sizeof(uint), _indices, BufferUsageHint.StaticDraw);
         
         _shader = new Shader("Shaders/texture.vert", "Shaders/texture.frag");
-        _shader.Use();
-
-        int aPositionLocation = _shader.GetAttribLocation("aPosition");
-        GL.EnableVertexAttribArray(aPositionLocation);
-        //GL.VertexAttribPointer(aPositionLocation, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+        for (int i = 0; i < 50; i++)
+        {
+            var icosphere = new Icosphere(2);
+            _renderObjects.Insert(i, new RenderObject(icosphere.Vertices.SelectMany(x=>x).ToArray(), icosphere.Indices.ToArray(), _shader));
+            _renderObjects[i].Rotation = Quaternion.FromEulerAngles(
+                RandomNumberGenerator.GetInt32(-90, 90),
+                RandomNumberGenerator.GetInt32(-90, 90),
+                RandomNumberGenerator.GetInt32(-90, 90));
+            _renderObjects[i].Position = new Vector3(
+                RandomNumberGenerator.GetInt32(-10, 10),
+                RandomNumberGenerator.GetInt32(-10, 10),
+                RandomNumberGenerator.GetInt32(-10, 10));
+            foreach (var vertex in icosphere.Vertices)
+            {
+                foreach (var a in vertex)
+                {
+                    Console.WriteLine(a);
+                }
+            }
+        }
         
-        int texCoordLocation = _shader.GetAttribLocation("aTexCoord");
-        GL.EnableVertexAttribArray(texCoordLocation);
-        //GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
         
-        _texture0 = new Texture("Textures/container.jpg");
-        _texture1 = new Texture("Textures/garfield.png");
-        _shader.SetInt("texture0", 0);
-        _shader.SetInt("texture1", 1);
-
+        
         base.OnLoad();
     }
 
     protected override void OnUnload()
     {
         GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
-        _VBOs.Select(x => { OpenTK.Graphics.OpenGL.GL.DeleteBuffer(x);
-            return x;
-        });
         _shader.Dispose();
         base.OnUnload();
     }
@@ -180,30 +142,15 @@ public class Game : GameWindow
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-        GL.BindVertexArray(_VAO);
 
-        float oscelator = (float)Sin(_timer.Elapsed.TotalSeconds)*2;
-        
-        Matrix4 model = Matrix4.CreateRotationX(DegreesToRadians(oscelator*10))*Matrix4.CreateRotationY(DegreesToRadians(oscelator*10));
-        Matrix4 view = _camera.GetViewMatrix();
-        Matrix4 projection = _camera.GetProjectionMatrix();
-        
-        _shader.SetMatrix4("model", model);
-        _shader.SetMatrix4("view", view);
-        _shader.SetMatrix4("projection", projection);
-        
-        _texture0.Use(TextureUnit.Texture0);
-        _texture1.Use(TextureUnit.Texture1);
-        _shader.Use();
-        
-        GL.BindVertexBuffer(_shader.GetAttribLocation("aTexCoord"), _VBOs[0],new IntPtr(3*sizeof(float)), 5 * sizeof(float));
-        for (int i = 0; i < _vertices.Count; i++)
+        for (int i = 0; i < _renderObjects.Count; i++)
         {
-            GL.BindVertexBuffer(_shader.GetAttribLocation("aPosition"), _VBOs[i],IntPtr.Zero, 5 * sizeof(float));
-            GL.DrawElements(PrimitiveType.LineLoop, _indices.Length, DrawElementsType.UnsignedInt, 0);
+            _renderObjects[i].Rotation *= Quaternion.FromEulerAngles(
+                RandomNumberGenerator.GetInt32(0, 1)/100f,
+                RandomNumberGenerator.GetInt32(0, 1)/100f,
+                RandomNumberGenerator.GetInt32(0, 1)/100f);
+            _renderObjects[i].Render(_camera.GetViewMatrix(), _camera.GetProjectionMatrix());
         }
-        
-        
         Context.SwapBuffers();
         
         base.OnRenderFrame(args);

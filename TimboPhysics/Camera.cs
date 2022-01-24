@@ -58,8 +58,8 @@ public class Camera
 
     public void MouseMove(Vector2 delta)
     {
-        Yaw += delta.X;
-        Pitch -= delta.Y;
+        Yaw += delta.X/2;
+        Pitch -= delta.Y/2;
     }
     
     public void Move(KeyboardState input, float deltaTime)
@@ -68,8 +68,8 @@ public class Camera
         Position += input.IsKeyDown(Keys.S)? Vector3.Zero : Front * Speed * deltaTime;
         Position -= input.IsKeyDown(Keys.D)? Vector3.Zero : Vector3.Normalize(Vector3.Cross(Front, Up)) * Speed * deltaTime;
         Position += input.IsKeyDown(Keys.A)? Vector3.Zero : Vector3.Normalize(Vector3.Cross(Front, Up)) * Speed * deltaTime;
-        Position += input.IsKeyDown(Keys.Space)? Vector3.Zero : Up * Speed * deltaTime;
-        Position -= input.IsKeyDown(Keys.LeftShift)? Vector3.Zero : Up * Speed * deltaTime;
+        Position -= input.IsKeyDown(Keys.Space)? Vector3.Zero : Vector3.UnitY * Speed * deltaTime;
+        Position += input.IsKeyDown(Keys.LeftShift)? Vector3.Zero : Vector3.UnitY * Speed * deltaTime;
     }
     
     private void UpdateVectors()
@@ -78,7 +78,7 @@ public class Camera
         Front.Y = MathF.Sin(_pitch);
         Front.Z = MathF.Cos(_pitch) * MathF.Sin(_yaw);
         Front = Vector3.Normalize(Front);
-        Right = Vector3.Normalize(Vector3.Cross(Front, Vector3.UnitY));
+        Right = Vector3.Normalize(Vector3.Cross(Front, Vector3.UnitY)); 
         Up = Vector3.Normalize(Vector3.Cross(Right, Front));
     }
     
