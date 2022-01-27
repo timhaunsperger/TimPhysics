@@ -13,15 +13,15 @@ namespace TimboPhysics;
 public class Game : GameWindow
 {
     float[][] _vertices = {
-        new [] {5f,  5f, -5f,  1.0f, 1.0f}, //top right back     0
-        new [] {5f, -5f, -5f,  0.0f, 0.0f}, //bottom right back  1
-        new [] {-5f, -5f, -5f,  1.0f, 0.0f}, //bottom left back   2
-        new [] {-5f,  5f, -5f,  0.0f, 1.0f}, //top left back      3
+        new [] {15f,  15f, -15f,  1.0f, 1.0f}, //top right back     0
+        new [] {15f, -15f, -15f,  0.0f, 0.0f}, //bottom right back  1
+        new [] {-15f, -15f, -15f,  1.0f, 0.0f}, //bottom left back   2
+        new [] {-15f,  15f, -15f,  0.0f, 1.0f}, //top left back      3
         
-        new [] {5f,  5f,  5f,  1.0f, 0.0f}, //top right front    4
-        new [] {5f, -5f,  5f,  0.0f, 1.0f}, //bottom right front 5
-        new [] {-5f, -5f,  5f,  1.0f, 1.0f}, //bottom left front  6
-        new [] {-5f,  5f,  5f,  0.0f, 0.0f}, //top left front     7
+        new [] {15f,  15f,  15f,  1.0f, 0.0f}, //top right front    4
+        new [] {15f, -15f,  15f,  0.0f, 1.0f}, //bottom right front 5
+        new [] {-15f, -15f,  15f,  1.0f, 1.0f}, //bottom left front  6
+        new [] {-15f,  15f,  15f,  0.0f, 0.0f}, //top left front     7
     };
     
     static float X=0.525731112119133606f;

@@ -14,7 +14,7 @@ namespace TimboPhysics
             gameWindowSettings.RenderFrequency = 100;
             gameWindowSettings.UpdateFrequency = 100;
             nativeWindowSettings.Title = "TimboPhysics";
-            nativeWindowSettings.Size = new Vector2i(1920, 1060);
+            nativeWindowSettings.Size = new Vector2i(1600, 900);
             Game game = new Game(gameWindowSettings, nativeWindowSettings);
             game.Run();
         }

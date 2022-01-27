@@ -12,7 +12,8 @@ public class PhysicsObject : RenderObject
     private bool isUpdated;
     private Dictionary<Vector3, uint> _indexLookup;
     private Dictionary<uint, PhysicsVertex> _vertexLookup;
-    private float floor = -5f;
+    private HashSet<Face> _faces = new ();
+    private float floor = -15f;
     
     public class PhysicsVertex
     {
@@ -40,6 +41,33 @@ public class PhysicsObject : RenderObject
         }
     }
     
+    public class Face
+    {
+        private PhysicsVertex[] Vertices;
+
+        public Face(PhysicsVertex v0, PhysicsVertex v1, PhysicsVertex v2)
+        {
+            Vertices = new PhysicsVertex[3];
+            Vertices[0] = v0;
+            Vertices[1] = v1;
+            Vertices[2] = v2;
+        }
+
+        public float GetArea()
+        {
+            float a = Vector3.Distance(Vertices[0].Position, Vertices[1].Position);
+            float b = Vector3.Distance(Vertices[1].Position, Vertices[2].Position);
+            float c = Vector3.Distance(Vertices[2].Position, Vertices[0].Position);
+            float s = (a + b + c) / 2;
+            return (float)Math.Sqrt(s * (s - a) * (s - b) * (s - c));
+        }
+
+        public Vector3 GetCenter()
+        {
+            return (Vertices[0].Position + Vertices[1].Position + Vertices[2].Position) / 3;
+        }
+    }
+    
     public PhysicsObject(float[][] vertices, uint[] indices, Dictionary<Vector3, uint> indexLookup, Shader shader, bool collision, bool gravity) 
         : base(vertices, indices, shader)
     {
@@ -61,8 +89,15 @@ public class PhysicsObject : RenderObject
             physicsVertex.Connections.Add(indices[i - i % 3 + 1]);
             physicsVertex.Connections.Add(indices[i - i % 3 + 2]);
             physicsVertex.Connections.Remove(indices[i]);
-            
-            
+
+            if (i%3==2)
+            {
+                _faces.Add(new Face(
+                    _vertexLookup[indices[i-2]],
+                    _vertexLookup[indices[i-1]],
+                    _vertexLookup[indices[i]]
+                    ));
+            }
         }
     }
 
@@ -80,8 +115,8 @@ public class PhysicsObject : RenderObject
             
             var vertex = _vertexLookup[vertexKey];
             vertex.Speed.Y *= 1f;
-            vertex.Speed.X *= 0.8f;
-            vertex.Speed.Z *= 0.8f;
+            vertex.Speed.X *= 1f;
+            vertex.Speed.Z *= 1f;
             if (_gravity)
             {
                 vertex.ApplyForce( new Vector3(0f,-0.001f,0f));  // Apply gravity
@@ -124,13 +159,12 @@ public class PhysicsObject : RenderObject
                 }
             }
             var ctrVector = vertex.Position - centerPos;
-            vertex.ApplyForce(ctrVector.Normalized() * (2-ctrVector.Length)*0.2f);
-            //vertex.Position = (ctrVector.Normalized() * 2+centerPos);
-            
+            vertex.ApplyForce(ctrVector.Normalized() * (2-ctrVector.Length)*0.07f);
+
             foreach (var connection in vertex.Connections)
             {
                 var vector = _vertexLookup[connection].Position - vertex.Position;
-                vertex.ApplyForce(vector.Normalized() * (vector.Length-0.5f) * 0.02f);
+                //vertex.ApplyForce(vector.Normalized() * (vector.Length-0.5f) * 0.007f);
 
             }
             _vertexLookup[vertexKey].UpdatePos();
