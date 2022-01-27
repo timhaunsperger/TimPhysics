@@ -43,6 +43,10 @@
       <Content Include="Textures\garfield.png">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
+      <None Remove="Shapes\Icosphere6\indices" />
+      <None Remove="Shapes\Icosphere6\vertices" />
+      <None Remove="Shapes\Icosphere7\vertices" />
+      <None Remove="Shapes\Icosphere7\indices" />
     </ItemGroup>
 
 </Project>

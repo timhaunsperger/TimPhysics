@@ -5,7 +5,6 @@ using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using static OpenTK.Mathematics.MathHelper;
 using OpenTK.Windowing.Common;
-using OpenTK.Windowing.Common.Input;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 
@@ -13,16 +12,16 @@ namespace TimboPhysics;
 
 public class Game : GameWindow
 {
-    float[,] _vertices = {
-        {0.5f,  0.5f, -0.5f,  1.0f, 1.0f}, //top right back     0
-        {0.5f, -0.5f, -0.5f,  0.0f, 0.0f}, //bottom right back  1
-        {-0.5f, -0.5f, -0.5f,  1.0f, 0.0f}, //bottom left back   2
-        {-0.5f,  0.5f, -0.5f,  0.0f, 1.0f}, //top left back      3
+    float[][] _vertices = {
+        new [] {5f,  5f, -5f,  1.0f, 1.0f}, //top right back     0
+        new [] {5f, -5f, -5f,  0.0f, 0.0f}, //bottom right back  1
+        new [] {-5f, -5f, -5f,  1.0f, 0.0f}, //bottom left back   2
+        new [] {-5f,  5f, -5f,  0.0f, 1.0f}, //top left back      3
         
-        {0.5f,  0.5f,  0.5f,  1.0f, 0.0f}, //top right front    4
-        {0.5f, -0.5f,  0.5f,  0.0f, 1.0f}, //bottom right front 5
-        {-0.5f, -0.5f,  0.5f,  1.0f, 1.0f}, //bottom left front  6
-        {-0.5f,  0.5f,  0.5f,  0.0f, 0.0f}, //top left front     7
+        new [] {5f,  5f,  5f,  1.0f, 0.0f}, //top right front    4
+        new [] {5f, -5f,  5f,  0.0f, 1.0f}, //bottom right front 5
+        new [] {-5f, -5f,  5f,  1.0f, 1.0f}, //bottom left front  6
+        new [] {-5f,  5f,  5f,  0.0f, 0.0f}, //top left front     7
     };
     
     static float X=0.525731112119133606f;
@@ -58,6 +57,17 @@ public class Game : GameWindow
         CursorGrabbed = true;
     }
 
+    public string log = "initial";
+    public int logInt = 0;
+
+    public void Log()
+    {
+        while (true)
+        {
+            Console.WriteLine(log + logInt);
+            Thread.Sleep(250);
+        }
+    }
     protected override void OnLoad()
     {
         _timer = new Stopwatch();
@@ -66,25 +76,21 @@ public class Game : GameWindow
         GL.ClearColor(new Color4(0.2f,0.2f,1f,1f));
         
         _shader = new Shader("Shaders/texture.vert", "Shaders/texture.frag");
-        for (int i = 0; i < 50; i++)
+        var logThread = new Thread(Log);
+        logThread.Start();
+        
+        FileStream vertFileStream = File.Create(@"Shapes\IcoSphere12\Vertices");
+        FileStream indFileStream = File.Create(@"Shapes\IcoSphere12\Indices");
+        
+        var icosphere = new Icosphere(1, this);
+        var icoVertices = icosphere.Vertices; 
+        var icoIndices = icosphere.Indices.Select(x=>(uint)x).ToArray();
+
+        log = "Files Loaded";
+        _renderObjects.Insert(0,new RenderObject(_vertices, _indices, _shader));
+        for (int i = 0; i < 1; i++)
         {
-            var icosphere = new Icosphere(2);
-            _renderObjects.Insert(i, new RenderObject(icosphere.Vertices.SelectMany(x=>x).ToArray(), icosphere.Indices.ToArray(), _shader));
-            _renderObjects[i].Rotation = Quaternion.FromEulerAngles(
-                RandomNumberGenerator.GetInt32(-90, 90),
-                RandomNumberGenerator.GetInt32(-90, 90),
-                RandomNumberGenerator.GetInt32(-90, 90));
-            _renderObjects[i].Position = new Vector3(
-                RandomNumberGenerator.GetInt32(-10, 10),
-                RandomNumberGenerator.GetInt32(-10, 10),
-                RandomNumberGenerator.GetInt32(-10, 10));
-            foreach (var vertex in icosphere.Vertices)
-            {
-                foreach (var a in vertex)
-                {
-                    Console.WriteLine(a);
-                }
-            }
+            _renderObjects.Insert(i, new PhysicsObject(icoVertices, icoIndices, icosphere.IndexLookup, _shader, false, true));
         }
         
         
@@ -97,6 +103,7 @@ public class Game : GameWindow
         GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
         _shader.Dispose();
         base.OnUnload();
+        Environment.Exit(0);
     }
 
     protected override void OnResize(ResizeEventArgs e)
@@ -132,6 +139,7 @@ public class Game : GameWindow
         if (input.IsKeyDown(Keys.Escape))
         {
             Close();
+            throw new Exception("closing program");
         }
         
         _camera.Move(input, (float)args.Time);
@@ -142,13 +150,9 @@ public class Game : GameWindow
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-
+        var oscilator = (float)Sin(_timer.Elapsed.TotalSeconds);
         for (int i = 0; i < _renderObjects.Count; i++)
         {
-            _renderObjects[i].Rotation *= Quaternion.FromEulerAngles(
-                RandomNumberGenerator.GetInt32(0, 1)/100f,
-                RandomNumberGenerator.GetInt32(0, 1)/100f,
-                RandomNumberGenerator.GetInt32(0, 1)/100f);
             _renderObjects[i].Render(_camera.GetViewMatrix(), _camera.GetProjectionMatrix());
         }
         Context.SwapBuffers();
