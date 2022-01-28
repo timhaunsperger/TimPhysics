@@ -28,7 +28,7 @@ public class Texture
                 pixels.Add(row[x].R);
                 pixels.Add(row[x].G);
                 pixels.Add(row[x].B);
-                pixels.Add(row[x].A);
+                pixels.Add((byte)0);
             }
         }
         
@@ -46,7 +46,7 @@ public class Texture
             PixelFormat.Rgba, 
             PixelType.UnsignedByte, 
             pixels.ToArray());
-        //GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
+        GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
     }
 
     public void Use(TextureUnit unit)

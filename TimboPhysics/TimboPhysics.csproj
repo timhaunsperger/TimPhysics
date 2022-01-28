@@ -23,11 +23,11 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
       <None Remove="Shaders\shader.frag" />
-      <Content Include="Shaders\vertcolor.frag">
+      <Content Include="Shaders\line.frag">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
       <None Remove="Shaders\shader.vert" />
-      <Content Include="Shaders\vertcolor.vert">
+      <Content Include="Shaders\line.vert">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
       <None Remove="Shaders\texture.vert" />

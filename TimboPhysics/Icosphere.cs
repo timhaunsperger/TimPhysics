@@ -4,12 +4,12 @@ namespace TimboPhysics;
 
 public class Icosphere
 {
-    static float X=0.525731112119133606f;
-    static float Z=0.850650808352039932f;
-    static float N=0f;
-    private float[][] _baseVertices=
+    static double X=0.525731112119133606;
+    static double Z=0.850650808352039932;
+    static double N=0;
+    private double[][] _baseVertices=
     {
-        new []{-X,N,2*Z}, 
+        new []{-X,N,Z}, 
         new []{X,N,Z}, 
         new []{-X,N,-Z}, 
         new []{X,N,-Z},
@@ -46,15 +46,16 @@ public class Icosphere
         7,2,11
     };
     
-    public float[][] Vertices;
+    public double[][] Vertices;
     public uint[] Indices; 
-    public Dictionary<Vector3, uint> IndexLookup;
+    public Dictionary<Vector3d, uint> IndexLookup;
+    private Face[] faces = new Face[20];
     
     private struct Face
     {
-        public Vector3[] faceVertices = new Vector3[3];
+        public Vector3d[] faceVertices = new Vector3d[3];
 
-        public Face(Vector3 v0, Vector3 v1, Vector3 v2)
+        public Face(Vector3d v0, Vector3d v1, Vector3d v2)
         {
             faceVertices[0] = v0;
             faceVertices[1] = v1;
@@ -62,65 +63,51 @@ public class Icosphere
         }
     }
     
-    public static Vector2 GetSphereCoord(Vector3 i)
+    public static Vector2d GetSphereCoord(Vector3d i)
     {
         var len = i.Length;
-        Vector2 uv;
-        uv.Y = (float)(Math.Acos(i.Y / len) / Math.PI);
-        uv.X = -(float)((Math.Atan2(i.Z, i.X) / Math.PI + 1.0f) * 0.5f);
+        Vector2d uv;
+        uv.Y = Math.Acos(i.Y / len) / Math.PI;
+        uv.X = -(Math.Atan2(i.Z, i.X) / Math.PI + 1.0f) * 0.5f;
         return uv;
     }
     
     public Icosphere(int recursion, Game log)
     {
-        var faces = new Vector3[20,3];
         for (int i = 0; i < _baseindices.Length; i+=3)
         {
-            var v0 = new Vector3(
+            var v0 = new Vector3d(
                 _baseVertices[_baseindices[i]][0], 
                 _baseVertices[_baseindices[i]][1],
                 _baseVertices[_baseindices[i]][2]);
-            var v1 = new Vector3(
+            var v1 = new Vector3d(
                 _baseVertices[_baseindices[i+1]][0],
                 _baseVertices[_baseindices[i+1]][1],
                 _baseVertices[_baseindices[i+1]][2]);
-            var v2 = new Vector3(
+            var v2 = new Vector3d(
                 _baseVertices[_baseindices[i+2]][0],
                 _baseVertices[_baseindices[i+2]][1],
                 _baseVertices[_baseindices[i+2]][2]);
-            //log.log = $"{i}";
-            faces[i/3,0] = v0;
-            faces[i/3,1] = v1;
-            faces[i/3,2] = v2;
+            faces[i/3] = new Face(v0, v1, v2);
         }
         
         for (int i = 0; i < recursion; i++)
         {
-            var newFaces = new Vector3[faces.GetLength(0)*4,3];
+            var newFaces = new Face[faces.Length*4];
             var ji = 0;
             for (int j = 0; j < faces.GetLength(0)*4; j+=4)
             {
-                var v0 = faces[ji,0].Normalized();
-                var v1 = faces[ji,1].Normalized();
-                var v2 = faces[ji,2].Normalized();
-                var v3 = ((faces[ji,0] + faces[ji,1]) / 2).Normalized();
-                var v4 = ((faces[ji,1] + faces[ji,2]) / 2).Normalized();
-                var v5 = ((faces[ji,2] + faces[ji,0]) / 2).Normalized();
-                newFaces[j+0,0] = v0;
-                newFaces[j+0,1] = v3;
-                newFaces[j+0,2] = v5;
+                var v0 = faces[ji].faceVertices[0].Normalized();
+                var v1 = faces[ji].faceVertices[1].Normalized();
+                var v2 = faces[ji].faceVertices[2].Normalized();
+                var v3 = ((v0 + v1) / 2).Normalized();
+                var v4 = ((v1 + v2) / 2).Normalized();
+                var v5 = ((v2 + v0) / 2).Normalized();
                 
-                newFaces[j+1,0] = v1;
-                newFaces[j+1,1] = v3;
-                newFaces[j+1,2] = v4;
-                
-                newFaces[j+2,0] = v2;
-                newFaces[j+2,1] = v4;
-                newFaces[j+2,2] = v5;
-                
-                newFaces[j+3,0] = v3;
-                newFaces[j+3,1] = v4;
-                newFaces[j+3,2] = v5;
+                newFaces[j+0] = new Face(v0, v3, v5);
+                newFaces[j+1] = new Face(v3, v1, v4);
+                newFaces[j+2] = new Face(v5, v4, v2);
+                newFaces[j+3] = new Face(v3, v4, v5);
                 ji++;
                 log.log = i + " " + j;
             }
@@ -129,22 +116,26 @@ public class Icosphere
         }
         log.log = "vertArray loading";
         
-        var outVertices = new List<Vector3>(10000);
+        var outVertices = new List<Vector3d>();
         uint lastVert = 0;
         
-        IndexLookup = new Dictionary<Vector3, uint>();
-        Indices = new uint[faces.GetLength(0)*3];
-        
-        for (int i = 0; i < faces.GetLength(0)*3; i++)
-        {
-            if (!IndexLookup.ContainsKey(faces[i/3,i % 3]))
-            {
-                outVertices.Add(faces[i/3,i%3]);
-                IndexLookup[faces[i / 3,i % 3]] = lastVert;
-                lastVert++;
-            }
-            Indices[i] = IndexLookup[faces[i/3,i%3]];
+        IndexLookup = new Dictionary<Vector3d, uint>();
+        Indices = new uint[faces.Length*3];
 
+        var indexNum = 0;
+        for (int i = 0; i < faces.Length; i++)
+        {
+            foreach (var vertex in faces[i].faceVertices)
+            {
+                if (!IndexLookup.ContainsKey(vertex))
+                {
+                    outVertices.Add(vertex);
+                    IndexLookup[vertex] = lastVert;
+                    lastVert++;
+                }
+                Indices[indexNum] = IndexLookup[vertex];
+                indexNum++;
+            }
             log.logInt = i;
         }
 

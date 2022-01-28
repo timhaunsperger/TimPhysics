@@ -7,8 +7,8 @@ public class RenderObject
 {
 
     private readonly Shader _shader;
-    protected float[][] _vertices;
-    protected float[] _flattenedVertices;
+    protected double[][] _vertices;
+    protected double[] _flattenedVertices;
     protected readonly uint[] _indices;
     protected int _VAO;
     protected int _VBO;
@@ -20,7 +20,7 @@ public class RenderObject
     public Quaternion Rotation = Quaternion.Identity;
     
     
-    public RenderObject(float[][] vertices, uint[] indecies, Shader shader)
+    public RenderObject(double[][] vertices, uint[] indecies, Shader shader)
     {
         _vertices = vertices;
         _flattenedVertices = vertices.SelectMany(x => x).ToArray();
@@ -32,7 +32,7 @@ public class RenderObject
         
         _VBO = GL.GenBuffer();
         GL.BindBuffer(BufferTarget.ArrayBuffer, _VBO);
-        GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float)*_flattenedVertices.Length, _flattenedVertices, BufferUsageHint.DynamicDraw);
+        GL.BufferData(BufferTarget.ArrayBuffer, sizeof(double)*_flattenedVertices.Length, _flattenedVertices, BufferUsageHint.DynamicDraw);
 
         _EBO = GL.GenBuffer();
         GL.BindBuffer(BufferTarget.ElementArrayBuffer, _EBO);
@@ -40,11 +40,11 @@ public class RenderObject
 
         int aPositionLocation = _shader.GetAttribLocation("aPosition");
         GL.EnableVertexAttribArray(aPositionLocation);
-        GL.VertexAttribPointer(aPositionLocation, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
+        GL.VertexAttribPointer(aPositionLocation, 3, VertexAttribPointerType.Double, false, 5 * sizeof(double), 0);
 
         int texCoordLocation = _shader.GetAttribLocation("aTexCoord");
         GL.EnableVertexAttribArray(texCoordLocation);
-        GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
+        GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Double, false, 5 * sizeof(double), 3 * sizeof(double));
         
         _shader.Use();
         _texture0 = new Texture("Textures/container.jpg");

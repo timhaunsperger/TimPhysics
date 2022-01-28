@@ -64,12 +64,12 @@ public class Camera
     
     public void Move(KeyboardState input, float deltaTime)
     {
-        Position -= input.IsKeyDown(Keys.W)? Vector3.Zero : Front * Speed * deltaTime;
-        Position += input.IsKeyDown(Keys.S)? Vector3.Zero : Front * Speed * deltaTime;
-        Position -= input.IsKeyDown(Keys.D)? Vector3.Zero : Vector3.Normalize(Vector3.Cross(Front, Up)) * Speed * deltaTime;
-        Position += input.IsKeyDown(Keys.A)? Vector3.Zero : Vector3.Normalize(Vector3.Cross(Front, Up)) * Speed * deltaTime;
-        Position -= input.IsKeyDown(Keys.Space)? Vector3.Zero : Vector3.UnitY * Speed * deltaTime;
-        Position += input.IsKeyDown(Keys.LeftShift)? Vector3.Zero : Vector3.UnitY * Speed * deltaTime;
+        Position -= input.IsKeyDown(Keys.W)? Vector3.Zero : Front * Speed * deltaTime/2;
+        Position += input.IsKeyDown(Keys.S)? Vector3.Zero : Front * Speed * deltaTime/2;
+        Position -= input.IsKeyDown(Keys.D)? Vector3.Zero : Vector3.Normalize(Vector3.Cross(Front, Up)) * Speed * deltaTime/2;
+        Position += input.IsKeyDown(Keys.A)? Vector3.Zero : Vector3.Normalize(Vector3.Cross(Front, Up)) * Speed * deltaTime/2;
+        Position -= input.IsKeyDown(Keys.Space) ? Vector3.Zero : Vector3.UnitY * Speed * deltaTime / 2;
+        Position += input.IsKeyDown(Keys.LeftShift)? Vector3.Zero : Vector3.UnitY * Speed * deltaTime/2;
     }
     
     private void UpdateVectors()
