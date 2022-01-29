@@ -52,7 +52,7 @@ public class Game : GameWindow
     public Game(GameWindowSettings gameSettings, NativeWindowSettings nativeSettings) 
         : base(gameSettings, nativeSettings)
     {
-        _camera = new Camera(Vector3.Zero, _AspectRatio);
+        _camera = new Camera(new Vector3(0, 0,8), _AspectRatio);
         CursorVisible = false;
         CursorGrabbed = true;
     }
@@ -83,7 +83,7 @@ public class Game : GameWindow
         FileStream vertFileStream = File.Create(@"Shapes\IcoSphere12\Vertices");
         FileStream indFileStream = File.Create(@"Shapes\IcoSphere12\Indices");
         
-        var icosphere = new Icosphere(0, this);
+        var icosphere = new Icosphere(3, this);
         var icoVertices = icosphere.Vertices; 
         var icoIndices = icosphere.Indices;
 

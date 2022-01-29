@@ -12,22 +12,20 @@ public class PhysicsObject : RenderObject
     private bool isUpdated;
     private Dictionary<Vector3d, uint> _indexLookup;
     private Dictionary<uint, PhysicsVertex> _vertexLookup;
-    private HashSet<Face> _faces = new ();
+    private uint[][] _faces;
     private double floor = -15f;
-    
+
     public class PhysicsVertex
     {
         public Vector3d Position;
         public Vector3d Speed;
         public float Mass;
-        public HashSet<uint> Connections;
 
-        public PhysicsVertex(Vector3d position, Vector3d speed, float mass, HashSet<uint> connections)
+        public PhysicsVertex(Vector3d position, Vector3d speed, float mass)
         {
             Position = position;
             Speed = speed;
             Mass = mass;
-            Connections = connections;
         }
 
         public void UpdatePos()
@@ -40,52 +38,7 @@ public class PhysicsObject : RenderObject
             Speed += force;
         }
     }
-    
-    private class Face
-    {
-        public uint[] Vertices;
 
-        public Face(uint v0, uint v1, uint v2)
-        {
-            Vertices = new uint[3];
-            Vertices[0] = v0;
-            Vertices[1] = v1;
-            Vertices[2] = v2;
-        }
-
-        public double GetArea(Dictionary<uint,PhysicsVertex> vertexLookup)
-        {
-            double a = Vector3d.Distance(vertexLookup[Vertices[0]].Position, vertexLookup[Vertices[1]].Position);
-            double b = Vector3d.Distance(vertexLookup[Vertices[1]].Position, vertexLookup[Vertices[2]].Position);
-            double c = Vector3d.Distance(vertexLookup[Vertices[2]].Position, vertexLookup[Vertices[0]].Position);
-            double s = (a + b + c) / 2;
-            return Math.Sqrt(s * (s - a) * (s - b) * (s - c));
-        }
-
-        public Vector3d GetNormal(Dictionary<uint, PhysicsVertex> vertexLookup)
-        {
-            var v0 = vertexLookup[Vertices[1]].Position - vertexLookup[Vertices[0]].Position;
-            var v1 = vertexLookup[Vertices[2]].Position - vertexLookup[Vertices[0]].Position;
-            return Vector3d.Cross(v0, v1).Normalized(); ;
-
-        }
-        
-        public double GetVolFromPoint(Dictionary<uint, PhysicsVertex> vertexLookup, Vector3d point)
-        {
-            var normal = GetNormal(vertexLookup);
-            var center = GetCenter(vertexLookup);
-            var distance = point - center;
-            var height = Vector3d.Dot(normal, distance);
-            
-            return GetArea(vertexLookup)*height/3f;
-        }
-
-        public Vector3d GetCenter(Dictionary<uint,PhysicsVertex> vertexLookup)
-        {
-            return (vertexLookup[Vertices[0]].Position + vertexLookup[Vertices[1]].Position + vertexLookup[Vertices[2]].Position) / 3;
-        }
-    }
-    
     public PhysicsObject(double[][] vertices, uint[] indices, Dictionary<Vector3d, uint> indexLookup, Shader shader, bool collision, bool gravity) 
         : base(vertices, indices, shader)
     {
@@ -93,117 +46,98 @@ public class PhysicsObject : RenderObject
         _collision = collision;
         _indexLookup = indexLookup;
         _vertexLookup = new Dictionary<uint, PhysicsVertex>();
+        _faces = new uint[indices.Length/3][];
 
         for (int i = 0; i < indices.Length; i++)
         {
             if (!_vertexLookup.ContainsKey(indices[i]))
             {
                 var vertexPos = new Vector3d(vertices[indices[i]][0], vertices[indices[i]][1], vertices[indices[i]][2]);
-                _vertexLookup[indices[i]] = new PhysicsVertex(vertexPos, Vector3d.Zero, 1, new HashSet<uint>());
+                _vertexLookup[indices[i]] = new PhysicsVertex(vertexPos, Vector3d.Zero, 1);
             }
-
-            var physicsVertex = _vertexLookup[indices[i]];
-            physicsVertex.Connections.Add(indices[i - i % 3 + 0]);
-            physicsVertex.Connections.Add(indices[i - i % 3 + 1]);
-            physicsVertex.Connections.Add(indices[i - i % 3 + 2]);
-            physicsVertex.Connections.Remove(indices[i]);
 
             if (i%3==2)
             {
-                _faces.Add(new Face(
-                    indices[i-2],
-                    indices[i-1],
-                    indices[i]
-                    ));
+                _faces[i/3] = new uint[3];
+                _faces[i/3][0] = indices[i-2];
+                _faces[i/3][1] = indices[i-1];
+                _faces[i/3][2] = indices[i-0];
             }
         }
     }
 
     private void Update()
     {
+        // Find center of object by averaging all vertices 
         var centerPos = Vector3d.Zero;
         foreach (var vertexKey in _vertexLookup.Keys)
         {
-            centerPos += _vertexLookup[vertexKey].Position;
+            centerPos += _vertexLookup[vertexKey].Position/_vertexLookup.Count;
         }
-        centerPos /= _vertexLookup.Count;
+
+        // Find volume of object by sum of volume of tetrahedrons of faces and centerPos
         var volume = 0d;
-        foreach (var face in _faces)
+        for (int i = 0; i < _faces.Length; i++)
         {
-            volume += face.GetVolFromPoint(_vertexLookup, centerPos);
+            volume += TMathUtils.GetVolume(
+                _vertexLookup[_faces[i][0]].Position,
+                _vertexLookup[_faces[i][1]].Position,
+                _vertexLookup[_faces[i][2]].Position,
+                centerPos);
         }
+
+        const double springConst = 0.5;
+        const double springOffset = 0.25;
+        const double dampingFactor = 0.1;
+        const double pressure = 1;
+
         foreach (var face in _faces)
         {
-            foreach (var faceVertex in face.Vertices)
+            PhysicsVertex[] vertices = {_vertexLookup[face[0]], _vertexLookup[face[1]], _vertexLookup[face[2]]};
+            
+            // Important values for calculating forces.
+            var faceNormal = TMathUtils.GetNormal(vertices[0].Position, vertices[1].Position, vertices[2].Position) * -1;  // Flip vector because it faces inward by default
+            var faceArea = TMathUtils.GetArea(vertices[0].Position, vertices[1].Position, vertices[2].Position);
+
+            for (int i = 0; i < face.Length; i++)
             {
-                var normal = face.GetNormal(_vertexLookup);
-                // Console.WriteLine(MathHelper.RadiansToDegrees(Vector3.CalculateAngle(normal, centerPos - face.GetCenter(_vertexLookup))));
-                if (MathHelper.RadiansToDegrees(Vector3d.CalculateAngle(normal, centerPos - face.GetCenter(_vertexLookup))) < 90)
-                {
-                    normal *= -1;
-                }
-                //_vertexLookup[faceVertex].ApplyForce(normal * face.GetArea(_vertexLookup) / volume * 0.002f);
+                var vertex = vertices[i];
+                var nextVertex = vertices[(i + 1) % 3];
                 
-                // var vector = face.GetCenter(_vertexLookup) - _vertexLookup[faceVertex].Position;
-                // _vertexLookup[faceVertex].ApplyForce(vector.Normalized() * (vector.Length-0.25f) * 0.25f);
+                //Apply Pressure Force
+                vertex.ApplyForce(faceNormal * faceArea / volume * pressure);
+                
+                //Apply Spring Force
+                var springVector = nextVertex.Position - vertex.Position;
+                vertex.ApplyForce(springVector * (springVector.Length - springOffset) * springConst);
+                nextVertex.ApplyForce(springVector * (springVector.Length - springOffset) * springConst * -1); // ensure net force on object as a whole is 0
+                
+                //Apply Damping Force
+                var relSpeed = vertex.Speed - nextVertex.Speed;
+                vertex.ApplyForce(relSpeed * -dampingFactor);
+                nextVertex.ApplyForce(relSpeed * -dampingFactor * -1);
+                
+                //Apply Changes
+                _vertexLookup[face[i]] = vertex;
+                _vertexLookup[face[(i + 1) % 3]] = nextVertex;
             }
         }
         foreach (uint vertexKey in _vertexLookup.Keys)
         {
             
             var vertex = _vertexLookup[vertexKey];
-            // vertex.Speed.Y *= 0.9f;
-            // vertex.Speed.X *= 0.9f;
-            // vertex.Speed.Z *= 0.9f;
             if (_gravity)
             {
-                //vertex.ApplyForce( new Vector3(0f,-0.001f,0f));  // Apply gravity
+                vertex.ApplyForce( new Vector3(0f,-0.001f,0f));  // Apply gravity
                 
-                if (vertex.Position.Y <= floor)  // Floor collision
+                if (vertex.Position.Y < floor)  // Floor collision
                 {
-                    vertex.Position.Y = floor;
-                    if (vertex.Speed.Y < 0)
-                        vertex.Speed.Y *= -0.2f;
-                }
-                if (vertex.Position.Y >= -floor)  // ceiling collision
-                {
-                    vertex.Position.Y = -floor;
-                    if (vertex.Speed.Y > 0)
-                        vertex.Speed.Y *= -0.2f;
-                }
-                if (vertex.Position.Z <= floor)  // Floor collision
-                {
-                    vertex.Position.Z = floor;
-                    if (vertex.Speed.Z < 0)
-                        vertex.Speed.Z *= -0.02f;
-                }
-                if (vertex.Position.Z >= -floor)  // ceiling collision
-                {
-                    vertex.Position.Z = -floor;
-                    if (vertex.Speed.Z > 0)
-                        vertex.Speed.Z *= -0.02f;
-                }
-                if (vertex.Position.X <= floor)  // Floor collision
-                {
-                    vertex.Position.X = floor;
-                    if (vertex.Speed.X < 0)
-                        vertex.Speed.X *= -0.02f;
-                }
-                if (vertex.Position.X >= -floor)  // ceiling collision
-                {
-                    vertex.Position.X = -floor;
-                    if (vertex.Speed.X > 0)
-                        vertex.Speed.X *= -0.02f;
+                    vertex.Position.Y = floor + 0.001d;
+                    //vertex.ApplyForce(new Vector3d(1,1,0));
+                    vertex.Speed *= 0.5;
                 }
             }
 
-            foreach (var connection in vertex.Connections)
-            {
-                var vector = _vertexLookup[connection].Position - vertex.Position;
-                vertex.ApplyForce(vector * 0.0001f);
-                var relSpeed = vertex.Speed - _vertexLookup[connection].Speed;
-            }
-            
             _vertexLookup[vertexKey].UpdatePos();
             _vertexLookup[vertexKey] = vertex;
         }
