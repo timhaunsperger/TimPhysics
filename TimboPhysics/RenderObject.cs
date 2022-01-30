@@ -53,12 +53,17 @@ public class RenderObject
         _shader.SetInt("texture1", 1);
     }
 
+    public virtual void Update(double deltaTime)
+    {
+        
+    }
+
     public virtual void Render(Matrix4 view, Matrix4 projection)
     {
         GL.BindVertexArray(_VAO);
         
         GL.BindBuffer(BufferTarget.ArrayBuffer, _VBO);
-
+        
         Matrix4 model = Matrix4.CreateFromQuaternion(Rotation) * Matrix4.CreateTranslation(Position);
         _shader.SetMatrix4("model", model);
         _shader.SetMatrix4("view", view);

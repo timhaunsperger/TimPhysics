@@ -11,7 +11,8 @@ public static class TMathUtils
     
     public static Vector3d GetNormal(Vector3d p0, Vector3d p1, Vector3d p2)
     {
-        return Vector3d.Cross(p1 - p0, p2 - p0).Normalized();
+        var invNormal = Vector3d.Cross(p1 - p0, p2 - p0).Normalized();
+        return invNormal * -1;
     }
     
     public static double GetArea(Vector3d p0, Vector3d p1, Vector3d p2)
@@ -25,11 +26,18 @@ public static class TMathUtils
 
     public static double GetVolume(Vector3d p0, Vector3d p1, Vector3d p2, Vector3d point)
     {
-        var normal = GetNormal(p0, p1, p2);
+        var normal = GetNormal(p0, p1, p2) * -1;
         var center = GetCenter(p0, p1, p2);
         var distance = point - center;
         var height = Vector3d.Dot(normal, distance);
             
         return GetArea(p0, p1, p2)*height/3f;
+    }
+    
+    public static bool IsPointBehindPlane(Vector3d p0, Vector3d p1, Vector3d p2, Vector3d point)
+    {
+        var center = GetCenter(p0, p1, p2).Normalized();
+        var normal = GetNormal(p0, p1, p2).Normalized();
+        return Vector3d.Dot(center - point, normal) > 0;
     }
 }

@@ -1,7 +1,5 @@
-﻿using System.Numerics;
-using OpenTK.Graphics.OpenGL4;
+﻿using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using Vector3 = OpenTK.Mathematics.Vector3;
 
 namespace TimboPhysics;
 
@@ -9,13 +7,12 @@ public class PhysicsObject : RenderObject
 {
     private bool _gravity;
     private bool _collision;
-    private bool isUpdated;
     private Dictionary<Vector3d, uint> _indexLookup;
     private Dictionary<uint, PhysicsVertex> _vertexLookup;
-    private uint[][] _faces;
+    private uint[][] _faces;  // Array of arrays storing which vertices are connected to form faces
     private double floor = -15f;
 
-    public class PhysicsVertex
+    public struct PhysicsVertex
     {
         public Vector3d Position;
         public Vector3d Speed;
@@ -26,16 +23,6 @@ public class PhysicsObject : RenderObject
             Position = position;
             Speed = speed;
             Mass = mass;
-        }
-
-        public void UpdatePos()
-        {
-            Position += Speed;
-        }
-
-        public void ApplyForce(Vector3d force)
-        {
-            Speed += force;
         }
     }
 
@@ -66,13 +53,17 @@ public class PhysicsObject : RenderObject
         }
     }
 
-    private void Update()
+    private Dictionary<uint,PhysicsVertex> NextPositions(Dictionary<uint,PhysicsVertex> baseVertices, Dictionary<uint,PhysicsVertex> outVertices, double timeStep)
     {
+        // Clone input dictionaries because dict is reference type
+        baseVertices = new Dictionary<uint, PhysicsVertex>(baseVertices);
+        outVertices = new Dictionary<uint, PhysicsVertex>(outVertices);
+        
         // Find center of object by averaging all vertices 
         var centerPos = Vector3d.Zero;
-        foreach (var vertexKey in _vertexLookup.Keys)
+        foreach (var vertexKey in baseVertices.Keys)
         {
-            centerPos += _vertexLookup[vertexKey].Position/_vertexLookup.Count;
+            centerPos += baseVertices[vertexKey].Position/baseVertices.Count;
         }
 
         // Find volume of object by sum of volume of tetrahedrons of faces and centerPos
@@ -80,70 +71,76 @@ public class PhysicsObject : RenderObject
         for (int i = 0; i < _faces.Length; i++)
         {
             volume += TMathUtils.GetVolume(
-                _vertexLookup[_faces[i][0]].Position,
-                _vertexLookup[_faces[i][1]].Position,
-                _vertexLookup[_faces[i][2]].Position,
+                baseVertices[_faces[i][0]].Position,
+                baseVertices[_faces[i][1]].Position,
+                baseVertices[_faces[i][2]].Position,
                 centerPos);
         }
 
-        const double springConst = 0.5;
-        const double springOffset = 0.25;
-        const double dampingFactor = 0.1;
-        const double pressure = 1;
+        const double springConst = 500;
+        const double springOffset = 1;
+        const double dampingFactor = 20;
+        const double pressure = 4000;
+        const double gravity = 0.5;
+        const double collisionForce = 50;
 
         foreach (var face in _faces)
         {
-            PhysicsVertex[] vertices = {_vertexLookup[face[0]], _vertexLookup[face[1]], _vertexLookup[face[2]]};
+            PhysicsVertex[] faceBaseVertices = {baseVertices[face[0]], baseVertices[face[1]], baseVertices[face[2]]};
+            PhysicsVertex[] faceOutVertices = {outVertices[face[0]], outVertices[face[1]], outVertices[face[2]]};
             
             // Important values for calculating forces.
-            var faceNormal = TMathUtils.GetNormal(vertices[0].Position, vertices[1].Position, vertices[2].Position) * -1;  // Flip vector because it faces inward by default
-            var faceArea = TMathUtils.GetArea(vertices[0].Position, vertices[1].Position, vertices[2].Position);
+            var faceNormal = TMathUtils.GetNormal(
+                faceBaseVertices[0].Position, 
+                faceBaseVertices[1].Position, 
+                faceBaseVertices[2].Position);
 
-            for (int i = 0; i < face.Length; i++)
+            var faceArea = TMathUtils.GetArea(
+                faceBaseVertices[0].Position, 
+                faceBaseVertices[1].Position, 
+                faceBaseVertices[2].Position);
+
+            for (uint i = 0; i < face.Length; i++)
             {
-                var vertex = vertices[i];
-                var nextVertex = vertices[(i + 1) % 3];
-                
                 //Apply Pressure Force
-                vertex.ApplyForce(faceNormal * faceArea / volume * pressure);
-                
+                faceOutVertices[i].Speed += faceNormal * faceArea / volume * pressure * timeStep;
                 //Apply Spring Force
-                var springVector = nextVertex.Position - vertex.Position;
-                vertex.ApplyForce(springVector * (springVector.Length - springOffset) * springConst);
-                nextVertex.ApplyForce(springVector * (springVector.Length - springOffset) * springConst * -1); // ensure net force on object as a whole is 0
+                var springVector = faceBaseVertices[(i + 1) % 3].Position - faceBaseVertices[i].Position;
+                faceOutVertices[i].Speed += springVector.Normalized() * (springVector.Length - springOffset) * springConst * timeStep;
+                faceOutVertices[(i + 1) % 3].Speed += springVector.Normalized() * (springVector.Length - springOffset) * springConst * timeStep * -1;
                 
                 //Apply Damping Force
-                var relSpeed = vertex.Speed - nextVertex.Speed;
-                vertex.ApplyForce(relSpeed * -dampingFactor);
-                nextVertex.ApplyForce(relSpeed * -dampingFactor * -1);
+                var relSpeed = faceBaseVertices[i].Speed - faceBaseVertices[(i + 1) % 3].Speed;
+                faceOutVertices[i].Speed += (relSpeed * -dampingFactor * timeStep);
+                faceOutVertices[(i + 1) % 3].Speed += (relSpeed * -dampingFactor * timeStep * -1);
                 
-                //Apply Changes
-                _vertexLookup[face[i]] = vertex;
-                _vertexLookup[face[(i + 1) % 3]] = nextVertex;
-            }
-        }
-        foreach (uint vertexKey in _vertexLookup.Keys)
-        {
-            
-            var vertex = _vertexLookup[vertexKey];
-            if (_gravity)
-            {
-                vertex.ApplyForce( new Vector3(0f,-0.001f,0f));  // Apply gravity
-                
-                if (vertex.Position.Y < floor)  // Floor collision
+                //Apply Gravity
+                if (_gravity)
                 {
-                    vertex.Position.Y = floor + 0.001d;
-                    //vertex.ApplyForce(new Vector3d(1,1,0));
-                    vertex.Speed *= 0.5;
+                    faceOutVertices[i].Speed -= Vector3d.UnitY * gravity * timeStep;
+    
+                    if (faceBaseVertices[i].Position.Y < floor)  // Floor collision
+                    {
+                        faceOutVertices[i].Speed += Vector3d.UnitY * -(faceBaseVertices[i].Position.Y - floor)* timeStep * collisionForce; // Floor friction
+                    }
                 }
             }
-
-            _vertexLookup[vertexKey].UpdatePos();
-            _vertexLookup[vertexKey] = vertex;
+            //Apply Changes
+            outVertices[face[0]] = faceOutVertices[0];
+            outVertices[face[1]] = faceOutVertices[1];
+            outVertices[face[2]] = faceOutVertices[2];
         }
+        
+        for (uint i = 0; i < baseVertices.Count; i++)
+        {
+            var vertex = outVertices[i];
+            vertex.Position += vertex.Speed * timeStep;
+            outVertices[i] = vertex;
+        }
+        return outVertices;
     }
 
-    private void UpdateVertices()
+    public void UpdateVertices()
     {
         for (int i = 0; i < _vertices.GetLength(0); i++)
         {
@@ -157,9 +154,52 @@ public class PhysicsObject : RenderObject
         _flattenedVertices = _vertices.SelectMany(x => x).ToArray();
     }
 
+    public Dictionary<uint, PhysicsVertex> RK4Integrate(Dictionary<uint, PhysicsVertex> vertices, double timeStep)
+    {
+        var k1 = NextPositions(vertices, vertices, timeStep);
+        var k1mid = NextPositions(vertices, vertices, timeStep/2);
+        var k2 = NextPositions(k1mid, vertices, timeStep);
+        var k2mid = NextPositions(k1mid, vertices, timeStep/2);
+        var k3 = NextPositions(k2mid, vertices, timeStep);
+        var k4 = NextPositions(k3, vertices, timeStep);
+
+        var result = new Dictionary<uint, PhysicsVertex>();
+
+        foreach (var key in vertices.Keys)
+        {
+            var entry = vertices[key];
+            entry.Position = 
+                (k1[key].Position + 2 * k2[key].Position + 2 * k3[key].Position + k4[key].Position)/6;
+            entry.Speed = 
+                (k1[key].Speed + 2 * k2[key].Speed + 2 * k3[key].Speed + k4[key].Speed)/6;
+            result[key] = entry;
+        }
+
+        return result;
+    }
+    
+
+    public override void Update(double deltaTime)
+    {
+        _vertexLookup = RK4Integrate(_vertexLookup, 0.005);
+        var isColliding = true;
+        foreach (var face in _faces)
+        {
+            if (!TMathUtils.IsPointBehindPlane(_vertexLookup[face[0]].Position,
+                    _vertexLookup[face[1]].Position,
+                    _vertexLookup[face[2]].Position,
+                     new Vector3d(0,0,0)))
+            {
+                isColliding = false;
+                break;
+            };
+        }
+        Console.WriteLine(isColliding);
+        base.Update(deltaTime);
+    }
+
     public override void Render(Matrix4 view, Matrix4 projection)
     {
-        Update();
         UpdateVertices();
         GL.BindVertexArray(_VAO);
         GL.BindBuffer(BufferTarget.ArrayBuffer, _VBO);

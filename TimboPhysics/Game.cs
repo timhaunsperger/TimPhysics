@@ -13,15 +13,15 @@ namespace TimboPhysics;
 public class Game : GameWindow
 {
     double[][] _vertices = {
-        new [] {15,  15, -15,  1.0, 1.0}, //top right back     0
+        new [] {15,  -15, -15,  1.0, 1.0}, //top right back     0
         new [] {15, -15, -15,  0.0, 0.0}, //bottom right back  1
         new [] {-15, -15, -15,  1.0, 0.0}, //bottom left back   2
-        new [] {-15,  15, -15,  0.0, 1.0}, //top left back      3
+        new [] {-15,  -15, -15,  0.0, 1.0}, //top left back      3
         
-        new [] {15,  15,  15,  1.0, 0.0}, //top right front    4
+        new [] {15,  -15,  15,  1.0, 0.0}, //top right front    4
         new [] {15, -15,  15,  0.0, 1.0}, //bottom right front 5
         new [] {-15, -15,  15,  1.0, 1.0}, //bottom left front  6
-        new [] {-15,  15,  15,  0.0, 0.0}, //top left front     7
+        new [] {-15,  -15,  15,  0.0, 0.0}, //top left front     7
     };
     
     static float X=0.525731112119133606f;
@@ -52,7 +52,7 @@ public class Game : GameWindow
     public Game(GameWindowSettings gameSettings, NativeWindowSettings nativeSettings) 
         : base(gameSettings, nativeSettings)
     {
-        _camera = new Camera(new Vector3(0, 0,8), _AspectRatio);
+        _camera = new Camera(new Vector3(0, -5,10), _AspectRatio);
         CursorVisible = false;
         CursorGrabbed = true;
     }
@@ -64,16 +64,14 @@ public class Game : GameWindow
     {
         while (true)
         {
-            Console.WriteLine(log + logInt);
+            //Console.WriteLine(log + logInt);
             Thread.Sleep(250);
         }
     }
     protected override void OnLoad()
     {
         _timer = new Stopwatch();
-        _timer.Start();
         GL.Enable(EnableCap.DepthTest);
-        // GL.Enable(EnableCap.CullFace);
         GL.ClearColor(new Color4(0.2f,0.2f,1f,1f));
         
         _shader = new Shader("Shaders/texture.vert", "Shaders/texture.frag");
@@ -83,7 +81,7 @@ public class Game : GameWindow
         FileStream vertFileStream = File.Create(@"Shapes\IcoSphere12\Vertices");
         FileStream indFileStream = File.Create(@"Shapes\IcoSphere12\Indices");
         
-        var icosphere = new Icosphere(3, this);
+        var icosphere = new Icosphere(2, this);
         var icoVertices = icosphere.Vertices; 
         var icoIndices = icosphere.Indices;
 
@@ -93,9 +91,7 @@ public class Game : GameWindow
         {
             _renderObjects.Insert(i, new PhysicsObject(icoVertices, icoIndices, icosphere.IndexLookup, _shader, false, true));
         }
-        
-        
-        
+        _timer.Start();
         base.OnLoad();
     }
 
@@ -132,30 +128,35 @@ public class Game : GameWindow
 
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
-        if (!IsFocused)
-        {
-            return;
-        }
         var input = KeyboardState;
         if (input.IsKeyDown(Keys.Escape))
         {
             Close();
             throw new Exception("closing program");
         }
-        
+
         _camera.Move(input, (float)args.Time);
-        
+        _frames += 1;
+        for (int i = 0; i < _renderObjects.Count; i++)
+        {
+            _renderObjects[i].Update(args.Time);
+        }
+
+        //Console.ReadLine();
         base.OnUpdateFrame(args);
     }
 
+    private int _frames = 0;
     protected override void OnRenderFrame(FrameEventArgs args)
     {
+        //Console.WriteLine(_frames / _timer.Elapsed.TotalSeconds);
+        
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-        var oscilator = (float)Sin(_timer.Elapsed.TotalSeconds);
         for (int i = 0; i < _renderObjects.Count; i++)
         {
             _renderObjects[i].Render(_camera.GetViewMatrix(), _camera.GetProjectionMatrix());
         }
+        
         Context.SwapBuffers();
         
         base.OnRenderFrame(args);
