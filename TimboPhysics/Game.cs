@@ -44,6 +44,7 @@ public class Game : GameWindow
     };
 
     private List<RenderObject> _renderObjects = new ();
+    private List<PhysicsObject> _physicsObjects = new ();
     private Shader _shader;
     private Stopwatch _timer;
     private float _AspectRatio = 1;
@@ -80,16 +81,13 @@ public class Game : GameWindow
         
         FileStream vertFileStream = File.Create(@"Shapes\IcoSphere12\Vertices");
         FileStream indFileStream = File.Create(@"Shapes\IcoSphere12\Indices");
-        
-        var icosphere = new Icosphere(2, this);
-        var icoVertices = icosphere.Vertices; 
-        var icoIndices = icosphere.Indices;
 
         log = "Files Loaded";
         _renderObjects.Insert(0,new RenderObject(_vertices, _indices, _shader));
-        for (int i = 0; i < 1; i++)
+        for (int i = 0; i < 4; i++)
         {
-            _renderObjects.Insert(i, new PhysicsObject(icoVertices, icoIndices, icosphere.IndexLookup, _shader, false, true));
+            var icosphere = new Icosphere(1, new Vector3d(i,3*i,0), this);
+            _physicsObjects.Insert(i, new PhysicsObject(icosphere.Vertices, icosphere.Indices, icosphere.IndexLookup, _shader, false, true));
         }
         _timer.Start();
         base.OnLoad();
@@ -139,7 +137,11 @@ public class Game : GameWindow
         _frames += 1;
         for (int i = 0; i < _renderObjects.Count; i++)
         {
-            _renderObjects[i].Update(args.Time);
+            _renderObjects[i].Update(_physicsObjects, args.Time);
+        }
+        for (int i = 0; i < _physicsObjects.Count; i++)
+        {
+            _physicsObjects[i].Update(_physicsObjects, args.Time);
         }
 
         //Console.ReadLine();
@@ -155,6 +157,10 @@ public class Game : GameWindow
         for (int i = 0; i < _renderObjects.Count; i++)
         {
             _renderObjects[i].Render(_camera.GetViewMatrix(), _camera.GetProjectionMatrix());
+        }
+        for (int i = 0; i < _physicsObjects.Count; i++)
+        {
+            _physicsObjects[i].Render(_camera.GetViewMatrix(), _camera.GetProjectionMatrix());
         }
         
         Context.SwapBuffers();

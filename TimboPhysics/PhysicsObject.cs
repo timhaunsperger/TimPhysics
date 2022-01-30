@@ -1,4 +1,5 @@
-﻿using OpenTK.Graphics.OpenGL4;
+﻿using System.IO.Enumeration;
+using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 
 namespace TimboPhysics;
@@ -7,6 +8,7 @@ public class PhysicsObject : RenderObject
 {
     private bool _gravity;
     private bool _collision;
+    private Vector3d _center;
     private Dictionary<Vector3d, uint> _indexLookup;
     private Dictionary<uint, PhysicsVertex> _vertexLookup;
     private uint[][] _faces;  // Array of arrays storing which vertices are connected to form faces
@@ -34,13 +36,14 @@ public class PhysicsObject : RenderObject
         _indexLookup = indexLookup;
         _vertexLookup = new Dictionary<uint, PhysicsVertex>();
         _faces = new uint[indices.Length/3][];
-
+        
         for (int i = 0; i < indices.Length; i++)
         {
             if (!_vertexLookup.ContainsKey(indices[i]))
             {
                 var vertexPos = new Vector3d(vertices[indices[i]][0], vertices[indices[i]][1], vertices[indices[i]][2]);
                 _vertexLookup[indices[i]] = new PhysicsVertex(vertexPos, Vector3d.Zero, 1);
+                _center += vertexPos;
             }
 
             if (i%3==2)
@@ -51,9 +54,15 @@ public class PhysicsObject : RenderObject
                 _faces[i/3][2] = indices[i-0];
             }
         }
+
+        _center /= _vertexLookup.Count;
     }
 
-    private Dictionary<uint,PhysicsVertex> NextPositions(Dictionary<uint,PhysicsVertex> baseVertices, Dictionary<uint,PhysicsVertex> outVertices, double timeStep)
+    private Dictionary<uint,PhysicsVertex> NextPositions(
+        Dictionary<uint,PhysicsVertex> baseVertices, 
+        Dictionary<uint,PhysicsVertex> outVertices, 
+        List<PhysicsObject> collisionObjects, 
+        double timeStep)
     {
         // Clone input dictionaries because dict is reference type
         baseVertices = new Dictionary<uint, PhysicsVertex>(baseVertices);
@@ -77,18 +86,50 @@ public class PhysicsObject : RenderObject
                 centerPos);
         }
 
-        const double springConst = 500;
-        const double springOffset = 1;
-        const double dampingFactor = 20;
-        const double pressure = 4000;
-        const double gravity = 0.5;
-        const double collisionForce = 50;
+        const double springConst = 800;
+        const double springOffset = 0.5;
+        const double dampingFactor = 1;
+        const double pressure = 1600;
+        const double gravity = 2;
+        const double collisionForce = 10000;
+        
+        //Collision
+        foreach (var collisionObject in collisionObjects)
+        {
+            if (collisionObject != this)
+            {
+                foreach (var vertex in baseVertices.Keys)
+                {
+                    var isColliding = true;
+                    foreach (var face in collisionObject._faces)
+                    {
+                        if (!TMathUtils.IsPointBehindPlane(
+                                collisionObject._vertexLookup[face[0]].Position, 
+                                collisionObject._vertexLookup[face[1]].Position,
+                                collisionObject._vertexLookup[face[2]].Position,
+                                baseVertices[vertex].Position))
+                        {
+                            isColliding = false;
+                        }
+                    }
+
+                    if (isColliding)
+                    {
+                        var forceVertex = outVertices[vertex];
+                        var forceVector = (_vertexLookup[vertex].Position - collisionObject._center);
+                        forceVertex.Speed += collisionForce * forceVector.Normalized()/forceVector.Length * timeStep;
+                        outVertices[vertex] = forceVertex;
+                        break;
+                    }
+                }
+            }
+        }
 
         foreach (var face in _faces)
         {
             PhysicsVertex[] faceBaseVertices = {baseVertices[face[0]], baseVertices[face[1]], baseVertices[face[2]]};
             PhysicsVertex[] faceOutVertices = {outVertices[face[0]], outVertices[face[1]], outVertices[face[2]]};
-            
+
             // Important values for calculating forces.
             var faceNormal = TMathUtils.GetNormal(
                 faceBaseVertices[0].Position, 
@@ -118,10 +159,13 @@ public class PhysicsObject : RenderObject
                 if (_gravity)
                 {
                     faceOutVertices[i].Speed -= Vector3d.UnitY * gravity * timeStep;
-    
-                    if (faceBaseVertices[i].Position.Y < floor)  // Floor collision
+
+                    var x2 = faceBaseVertices[i].Position.X * faceBaseVertices[i].Position.X / 4;
+                    var z2 = faceBaseVertices[i].Position.Z * faceBaseVertices[i].Position.Z / 4;
+                    if (faceBaseVertices[i].Position.Y - x2 - z2 < floor)  // Floor collision
                     {
-                        faceOutVertices[i].Speed += Vector3d.UnitY * -(faceBaseVertices[i].Position.Y - floor)* timeStep * collisionForce; // Floor friction
+                        faceOutVertices[i].Speed += (Vector3d.Zero - faceBaseVertices[i].Position) * (floor - (faceBaseVertices[i].Position.Y - x2 - z2)) * timeStep * 20;
+                        faceOutVertices[i].Speed *= 0.98;
                     }
                 }
             }
@@ -130,13 +174,17 @@ public class PhysicsObject : RenderObject
             outVertices[face[1]] = faceOutVertices[1];
             outVertices[face[2]] = faceOutVertices[2];
         }
-        
+        _center = Vector3d.Zero;
         for (uint i = 0; i < baseVertices.Count; i++)
         {
             var vertex = outVertices[i];
+            //Update Values
             vertex.Position += vertex.Speed * timeStep;
+            _center += vertex.Position;
             outVertices[i] = vertex;
         }
+
+        _center /= baseVertices.Count;
         return outVertices;
     }
 
@@ -154,14 +202,14 @@ public class PhysicsObject : RenderObject
         _flattenedVertices = _vertices.SelectMany(x => x).ToArray();
     }
 
-    public Dictionary<uint, PhysicsVertex> RK4Integrate(Dictionary<uint, PhysicsVertex> vertices, double timeStep)
+    public Dictionary<uint, PhysicsVertex> RK4Integrate(Dictionary<uint, PhysicsVertex> vertices, List<PhysicsObject> collisionObjects, double timeStep)
     {
-        var k1 = NextPositions(vertices, vertices, timeStep);
-        var k1mid = NextPositions(vertices, vertices, timeStep/2);
-        var k2 = NextPositions(k1mid, vertices, timeStep);
-        var k2mid = NextPositions(k1mid, vertices, timeStep/2);
-        var k3 = NextPositions(k2mid, vertices, timeStep);
-        var k4 = NextPositions(k3, vertices, timeStep);
+        var k1 = NextPositions(vertices, vertices, collisionObjects, timeStep);
+        var k1mid = NextPositions(vertices, vertices, collisionObjects, timeStep/2);
+        var k2 = NextPositions(k1mid, vertices, collisionObjects, timeStep);
+        var k2mid = NextPositions(k1mid, vertices, collisionObjects, timeStep/2);
+        var k3 = NextPositions(k2mid, vertices, collisionObjects, timeStep);
+        var k4 = NextPositions(k3, vertices, collisionObjects, timeStep);
 
         var result = new Dictionary<uint, PhysicsVertex>();
 
@@ -179,23 +227,10 @@ public class PhysicsObject : RenderObject
     }
     
 
-    public override void Update(double deltaTime)
+    public override void Update(List<PhysicsObject> collisionObjects, double deltaTime)
     {
-        _vertexLookup = RK4Integrate(_vertexLookup, 0.005);
-        var isColliding = true;
-        foreach (var face in _faces)
-        {
-            if (!TMathUtils.IsPointBehindPlane(_vertexLookup[face[0]].Position,
-                    _vertexLookup[face[1]].Position,
-                    _vertexLookup[face[2]].Position,
-                     new Vector3d(0,0,0)))
-            {
-                isColliding = false;
-                break;
-            };
-        }
-        Console.WriteLine(isColliding);
-        base.Update(deltaTime);
+        _vertexLookup = NextPositions(_vertexLookup,  _vertexLookup, collisionObjects, 0.005);
+        base.Update(collisionObjects, deltaTime);
     }
 
     public override void Render(Matrix4 view, Matrix4 projection)

@@ -7,7 +7,7 @@ public class RenderObject
 {
 
     private readonly Shader _shader;
-    protected double[][] _vertices;
+    public double[][] _vertices;
     protected double[] _flattenedVertices;
     protected readonly uint[] _indices;
     protected int _VAO;
@@ -53,7 +53,7 @@ public class RenderObject
         _shader.SetInt("texture1", 1);
     }
 
-    public virtual void Update(double deltaTime)
+    public virtual void Update(List<PhysicsObject> collisionObjects, double deltaTime)
     {
         
     }
