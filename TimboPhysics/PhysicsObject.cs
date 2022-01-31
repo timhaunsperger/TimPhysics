@@ -13,6 +13,7 @@ public class PhysicsObject : RenderObject
     private Dictionary<uint, PhysicsVertex> _vertexLookup;
     private uint[][] _faces;  // Array of arrays storing which vertices are connected to form faces
     private double floor = -15f;
+    private double _maxRadius;
 
     public struct PhysicsVertex
     {
@@ -86,39 +87,57 @@ public class PhysicsObject : RenderObject
                 centerPos);
         }
 
-        const double springConst = 800;
+        const double springConst = 1000;
         const double springOffset = 0.5;
         const double dampingFactor = 1;
-        const double pressure = 1600;
-        const double gravity = 2;
-        const double collisionForce = 10000;
-        
+        const double pressure = 10000;
+        const double gravity = 1;
+
         //Collision
         foreach (var collisionObject in collisionObjects)
         {
             if (collisionObject != this)
             {
+                if ((collisionObject._center-_center).Length > collisionObject._maxRadius + _maxRadius)
+                {
+                    continue;
+                }
                 foreach (var vertex in baseVertices.Keys)
                 {
                     var isColliding = true;
+                    var closestFaceDist = Double.PositiveInfinity;
+                    var closestFace = Array.Empty<uint>();
                     foreach (var face in collisionObject._faces)
                     {
-                        if (!TMathUtils.IsPointBehindPlane(
-                                collisionObject._vertexLookup[face[0]].Position, 
-                                collisionObject._vertexLookup[face[1]].Position,
-                                collisionObject._vertexLookup[face[2]].Position,
-                                baseVertices[vertex].Position))
+                        var distance = TMathUtils.PointPlaneDist(
+                            collisionObject._vertexLookup[face[0]].Position,
+                            collisionObject._vertexLookup[face[1]].Position,
+                            collisionObject._vertexLookup[face[2]].Position,
+                            baseVertices[vertex].Position);
+                        if (distance < 0)
                         {
                             isColliding = false;
+                            break;
                         }
+                        if (distance < closestFaceDist)
+                        {
+                            closestFaceDist = distance;
+                            closestFace = face;
+                        }
+                        
                     }
-
                     if (isColliding)
                     {
                         var forceVertex = outVertices[vertex];
-                        var forceVector = (_vertexLookup[vertex].Position - collisionObject._center);
-                        forceVertex.Speed += collisionForce * forceVector.Normalized()/forceVector.Length * timeStep;
+                        var forceVector = TMathUtils.GetNormal(
+                            collisionObject._vertexLookup[closestFace[0]].Position,
+                            collisionObject._vertexLookup[closestFace[1]].Position,
+                            collisionObject._vertexLookup[closestFace[2]].Position);
+                        
+                        forceVertex.Position += forceVector * closestFaceDist;
+                        forceVertex.Speed *= Vector3d.Dot(forceVertex.Speed.Normalized(), forceVector);
                         outVertices[vertex] = forceVertex;
+                        
                         break;
                     }
                 }
@@ -162,10 +181,14 @@ public class PhysicsObject : RenderObject
 
                     var x2 = faceBaseVertices[i].Position.X * faceBaseVertices[i].Position.X / 4;
                     var z2 = faceBaseVertices[i].Position.Z * faceBaseVertices[i].Position.Z / 4;
-                    if (faceBaseVertices[i].Position.Y - x2 - z2 < floor)  // Floor collision
+                    faceOutVertices[i].Speed += (Vector3d.Zero - faceBaseVertices[i].Position) * timeStep * 0.05f;
+                    if (faceBaseVertices[i].Position.Y < floor)  // Floor collision
                     {
-                        faceOutVertices[i].Speed += (Vector3d.Zero - faceBaseVertices[i].Position) * (floor - (faceBaseVertices[i].Position.Y - x2 - z2)) * timeStep * 20;
-                        faceOutVertices[i].Speed *= 0.98;
+                        faceOutVertices[i].Position.Y = floor;
+                        if (faceBaseVertices[i].Speed.Y < 0)
+                        {
+                            faceOutVertices[i].Speed.Y = 0;
+                        }
                     }
                 }
             }
@@ -175,6 +198,7 @@ public class PhysicsObject : RenderObject
             outVertices[face[2]] = faceOutVertices[2];
         }
         _center = Vector3d.Zero;
+        _maxRadius = 0d;
         for (uint i = 0; i < baseVertices.Count; i++)
         {
             var vertex = outVertices[i];
@@ -183,8 +207,15 @@ public class PhysicsObject : RenderObject
             _center += vertex.Position;
             outVertices[i] = vertex;
         }
-
         _center /= baseVertices.Count;
+        for (uint i = 0; i < baseVertices.Count; i++)
+        {
+            var vertex = outVertices[i];
+            if (_maxRadius < (vertex.Position-_center).Length)
+            {
+                _maxRadius = (vertex.Position - _center).Length;
+            }
+        }
         return outVertices;
     }
 
@@ -229,6 +260,7 @@ public class PhysicsObject : RenderObject
 
     public override void Update(List<PhysicsObject> collisionObjects, double deltaTime)
     {
+        _vertexLookup = NextPositions(_vertexLookup,  _vertexLookup, collisionObjects, 0.005);
         _vertexLookup = NextPositions(_vertexLookup,  _vertexLookup, collisionObjects, 0.005);
         base.Update(collisionObjects, deltaTime);
     }
