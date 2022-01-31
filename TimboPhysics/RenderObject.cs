@@ -15,11 +15,7 @@ public class RenderObject
     private int _EBO;
     private Texture _texture0;
     private Texture _texture1;
-    
-    public Vector3 Position = Vector3.Zero;
-    public Quaternion Rotation = Quaternion.Identity;
-    
-    
+
     public RenderObject(double[][] vertices, uint[] indecies, Shader shader)
     {
         _vertices = vertices;
@@ -64,8 +60,6 @@ public class RenderObject
         
         GL.BindBuffer(BufferTarget.ArrayBuffer, _VBO);
         
-        Matrix4 model = Matrix4.CreateFromQuaternion(Rotation) * Matrix4.CreateTranslation(Position);
-        _shader.SetMatrix4("model", model);
         _shader.SetMatrix4("view", view);
         _shader.SetMatrix4("projection", projection);
         _shader.Use();

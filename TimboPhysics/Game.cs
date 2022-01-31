@@ -84,9 +84,9 @@ public class Game : GameWindow
 
         log = "Files Loaded";
         _renderObjects.Insert(0,new RenderObject(_vertices, _indices, _shader));
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 10; i++)
         {
-            var icosphere = new Icosphere(2, new Vector3d(i,3*i,0), this);
+            var icosphere = new Icosphere(2, new Vector3d(3*i,3*i,0), this);
             _physicsObjects.Insert(i, new PhysicsObject(icosphere.Vertices, icosphere.Indices, icosphere.IndexLookup, _shader, false, true));
         }
         _timer.Start();
