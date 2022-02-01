@@ -87,12 +87,12 @@ public class PhysicsObject : RenderObject
                 centerPos);
         }
 
-        const double springConst = 30000;
+        const double springConst = 4000;
         const double springOffset = 0.25;
         const double dampingFactor = 2;
-        const double pressure = 30000;
-        const double gravity = 1;
-        
+        const double pressure = 4000;
+        const double gravity = 0.5;
+
         foreach (var face in _faces)
         {
             PhysicsVertex[] faceBaseVertices = {baseVertices[face[0]], baseVertices[face[1]], baseVertices[face[2]]};
@@ -130,7 +130,7 @@ public class PhysicsObject : RenderObject
 
                     var x2 = faceBaseVertices[i].Position.X * faceBaseVertices[i].Position.X / 4;
                     var z2 = faceBaseVertices[i].Position.Z * faceBaseVertices[i].Position.Z / 4;
-                    faceOutVertices[i].Speed += (Vector3d.UnitY * -15 - faceBaseVertices[i].Position) * timeStep * 1f;
+                    faceOutVertices[i].Speed += (Vector3d.UnitY * -15 - faceBaseVertices[i].Position) * timeStep * 0.05f;
                     if (faceBaseVertices[i].Position.Y < floor)  // Floor collision
                     {
                         faceOutVertices[i].Position.Y = floor;
@@ -150,12 +150,8 @@ public class PhysicsObject : RenderObject
         //Collision
         foreach (var collisionObject in collisionObjects)
         {
-            if (collisionObject != this)
+            if (collisionObject != this && (collisionObject._center-_center).Length < collisionObject._maxRadius + _maxRadius)
             {
-                if ((collisionObject._center-_center).Length > collisionObject._maxRadius + _maxRadius)
-                {
-                    continue;
-                }
                 foreach (var vertex in baseVertices.Keys)
                 {
                     if ((collisionObject._center-baseVertices[vertex].Position).Length > collisionObject._maxRadius)
@@ -164,7 +160,6 @@ public class PhysicsObject : RenderObject
                     }
                     var isColliding = true;
                     var closestFaceDist = Double.PositiveInfinity;
-                    var closestFaceCtrDist = Double.PositiveInfinity;
                     var closestFace = Array.Empty<uint>();
                     foreach (var face in collisionObject._faces)
                     {
@@ -189,23 +184,17 @@ public class PhysicsObject : RenderObject
                     if (isColliding)
                     {
                         var forceVertex = outVertices[vertex];
-                        // var forceVector = TMathUtils.GetNormal(
-                        //     collisionObject._vertexLookup[closestFace[0]].Position,
-                        //     collisionObject._vertexLookup[closestFace[1]].Position,
-                        //     collisionObject._vertexLookup[closestFace[2]].Position);
                         var forceVector = _center - forceVertex.Position;
                         for (int i = 0; i < 3; i++)
                         {
                             var faceVertex = collisionObject._vertexLookup[closestFace[i]];
                             faceVertex.Position -= forceVector * closestFaceDist/2;
-                            faceVertex.Speed *= -Vector3d.Dot(forceVector, faceVertex.Speed.Normalized());
+                            faceVertex.Speed -= 2*Vector3d.Dot(forceVector, faceVertex.Speed.Normalized()) * forceVector;
                             collisionObject._vertexLookup[closestFace[i]] = faceVertex;
                         }
                         forceVertex.Position += forceVector * closestFaceDist/2;
-                        forceVertex.Speed *= Vector3d.Dot(forceVector, forceVertex.Speed.Normalized());
+                        forceVertex.Speed -= 2*Vector3d.Dot(forceVector, forceVertex.Speed.Normalized()) * forceVector;
                         outVertices[vertex] = forceVertex;
-                        
-                        break;
                     }
                 }
             }
@@ -279,9 +268,7 @@ public class PhysicsObject : RenderObject
     public override void Update(List<PhysicsObject> collisionObjects, double deltaTime)
     {
         //_vertexLookup = RK4Integrate(_vertexLookup,collisionObjects, 0.0005);
-        _vertexLookup = NextPositions(_vertexLookup,  _vertexLookup, collisionObjects, 0.0025);
-        _vertexLookup = NextPositions(_vertexLookup,  _vertexLookup, collisionObjects, 0.0025);
-        _vertexLookup = NextPositions(_vertexLookup,  _vertexLookup, collisionObjects, 0.0025);
+        _vertexLookup = NextPositions(_vertexLookup,  _vertexLookup, collisionObjects, 0.005);
         base.Update(collisionObjects, deltaTime);
     }
 

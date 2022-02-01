@@ -1,9 +1,6 @@
-﻿using System;
-using System.Diagnostics;
-using System.Security.Cryptography;
+﻿using System.Diagnostics;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using static OpenTK.Mathematics.MathHelper;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
@@ -84,9 +81,9 @@ public class Game : GameWindow
 
         log = "Files Loaded";
         _renderObjects.Insert(0,new RenderObject(_vertices, _indices, _shader));
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 100; i++)
         {
-            var icosphere = new Icosphere(2, new Vector3d(3*i,3*i,0), this);
+            var icosphere = new Icosphere(1, new Vector3d(i%6,1*i,(i*-1)%6), this);
             _physicsObjects.Insert(i, new PhysicsObject(icosphere.Vertices, icosphere.Indices, icosphere.IndexLookup, _shader, false, true));
         }
         _timer.Start();
@@ -104,7 +101,7 @@ public class Game : GameWindow
     protected override void OnResize(ResizeEventArgs e)
     {
         GL.Viewport(0, 0, e.Width, e.Height);
-        _camera.AspectRatio = (float)e.Width / (float)e.Height;
+        _camera.AspectRatio = e.Width / (float)e.Height;
         base.OnResize(e);
     }
     
@@ -143,15 +140,14 @@ public class Game : GameWindow
         {
             _physicsObjects[i].Update(_physicsObjects, args.Time);
         }
-
-        //Console.ReadLine();
+        
         base.OnUpdateFrame(args);
     }
 
     private int _frames = 0;
     protected override void OnRenderFrame(FrameEventArgs args)
     {
-        //Console.WriteLine(_frames / _timer.Elapsed.TotalSeconds);
+        Console.WriteLine(_frames / _timer.Elapsed.TotalSeconds);
         
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         for (int i = 0; i < _renderObjects.Count; i++)
