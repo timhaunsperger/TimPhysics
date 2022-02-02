@@ -10,7 +10,7 @@ public class PhysicsObject : RenderObject
     private bool _collision;
     private Vector3d _center;
     private Dictionary<Vector3d, uint> _indexLookup;
-    private Dictionary<uint, PhysicsVertex> _vertexLookup;
+    public Dictionary<uint, PhysicsVertex> _vertexLookup;
     private uint[][] _faces;  // Array of arrays storing which vertices are connected to form faces
     private double floor = -15f;
     private double _maxRadius;
@@ -19,13 +19,11 @@ public class PhysicsObject : RenderObject
     {
         public Vector3d Position;
         public Vector3d Speed;
-        public float Mass;
 
-        public PhysicsVertex(Vector3d position, Vector3d speed, float mass)
+        public PhysicsVertex(Vector3d position, Vector3d speed)
         {
             Position = position;
             Speed = speed;
-            Mass = mass;
         }
     }
 
@@ -43,7 +41,7 @@ public class PhysicsObject : RenderObject
             if (!_vertexLookup.ContainsKey(indices[i]))
             {
                 var vertexPos = new Vector3d(vertices[indices[i]][0], vertices[indices[i]][1], vertices[indices[i]][2]);
-                _vertexLookup[indices[i]] = new PhysicsVertex(vertexPos, Vector3d.Zero, 1);
+                _vertexLookup[indices[i]] = new PhysicsVertex(vertexPos, Vector3d.Zero);
                 _center += vertexPos;
             }
 
@@ -87,11 +85,12 @@ public class PhysicsObject : RenderObject
                 centerPos);
         }
 
-        const double springConst = 4000;
-        const double springOffset = 0.25;
-        const double dampingFactor = 2;
-        const double pressure = 4000;
+        const double springConst = 3000;
+        const double springOffset = 0.125;
+        const double dampingFactor = 4;
+        const double pressure = 12000;
         const double gravity = 0.5;
+        const double attraction = 0.015;
 
         foreach (var face in _faces)
         {
@@ -127,10 +126,8 @@ public class PhysicsObject : RenderObject
                 if (_gravity)
                 {
                     faceOutVertices[i].Speed -= Vector3d.UnitY * gravity * timeStep;
-
-                    var x2 = faceBaseVertices[i].Position.X * faceBaseVertices[i].Position.X / 4;
-                    var z2 = faceBaseVertices[i].Position.Z * faceBaseVertices[i].Position.Z / 4;
-                    faceOutVertices[i].Speed += (Vector3d.UnitY * -15 - faceBaseVertices[i].Position) * timeStep * 0.05f;
+                    faceOutVertices[i].Speed += (Vector3d.UnitY * -15 - faceBaseVertices[i].Position) * timeStep * attraction;
+                    
                     if (faceBaseVertices[i].Position.Y < floor)  // Floor collision
                     {
                         faceOutVertices[i].Position.Y = floor;
@@ -184,12 +181,12 @@ public class PhysicsObject : RenderObject
                     if (isColliding)
                     {
                         var forceVertex = outVertices[vertex];
-                        var forceVector = _center - forceVertex.Position;
+                        var forceVector = (_center - forceVertex.Position).Normalized();
                         for (int i = 0; i < 3; i++)
                         {
                             var faceVertex = collisionObject._vertexLookup[closestFace[i]];
                             faceVertex.Position -= forceVector * closestFaceDist/2;
-                            faceVertex.Speed -= 2*Vector3d.Dot(forceVector, faceVertex.Speed.Normalized()) * forceVector;
+                            faceVertex.Speed += 2*Vector3d.Dot(forceVector * -1, faceVertex.Speed.Normalized()) * forceVector;
                             collisionObject._vertexLookup[closestFace[i]] = faceVertex;
                         }
                         forceVertex.Position += forceVector * closestFaceDist/2;
@@ -265,11 +262,13 @@ public class PhysicsObject : RenderObject
     }
     
 
-    public override void Update(List<PhysicsObject> collisionObjects, double deltaTime)
+    public void Update(List<PhysicsObject> collisionObjects, double deltaTime)
     {
-        //_vertexLookup = RK4Integrate(_vertexLookup,collisionObjects, 0.0005);
+        
+        //Only useful for increased accuracy in single object/collisionless simulations 
+        //_vertexLookup = RK4Integrate(_vertexLookup,collisionObjects, 0.005);
+        
         _vertexLookup = NextPositions(_vertexLookup,  _vertexLookup, collisionObjects, 0.005);
-        base.Update(collisionObjects, deltaTime);
     }
 
     public override void Render(Matrix4 view, Matrix4 projection)

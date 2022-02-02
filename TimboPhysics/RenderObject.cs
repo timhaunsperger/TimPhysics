@@ -48,12 +48,7 @@ public class RenderObject
         _shader.SetInt("texture0", 0);
         _shader.SetInt("texture1", 1);
     }
-
-    public virtual void Update(List<PhysicsObject> collisionObjects, double deltaTime)
-    {
-        
-    }
-
+    
     public virtual void Render(Matrix4 view, Matrix4 projection)
     {
         GL.BindVertexArray(_VAO);

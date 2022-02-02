@@ -75,15 +75,12 @@ public class Game : GameWindow
         _shader = new Shader("Shaders/texture.vert", "Shaders/texture.frag");
         var logThread = new Thread(Log);
         logThread.Start();
-        
-        FileStream vertFileStream = File.Create(@"Shapes\IcoSphere12\Vertices");
-        FileStream indFileStream = File.Create(@"Shapes\IcoSphere12\Indices");
 
         log = "Files Loaded";
         _renderObjects.Insert(0,new RenderObject(_vertices, _indices, _shader));
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 20; i++)
         {
-            var icosphere = new Icosphere(1, new Vector3d(i%6,1*i,(i*-1)%6), this);
+            var icosphere = new Icosphere(i%4, new Vector3d(i%6,1*i,(i*-1)%6), this);
             _physicsObjects.Insert(i, new PhysicsObject(icosphere.Vertices, icosphere.Indices, icosphere.IndexLookup, _shader, false, true));
         }
         _timer.Start();
@@ -132,15 +129,30 @@ public class Game : GameWindow
 
         _camera.Move(input, (float)args.Time);
         _frames += 1;
-        for (int i = 0; i < _renderObjects.Count; i++)
-        {
-            _renderObjects[i].Update(_physicsObjects, args.Time);
-        }
+
+        var physicsUpdateTasks = new Task[_physicsObjects.Count];
+        
         for (int i = 0; i < _physicsObjects.Count; i++)
         {
-            _physicsObjects[i].Update(_physicsObjects, args.Time);
+            if (input.IsKeyDown(Keys.U))
+            {
+                for (uint j = 0; j < _physicsObjects[i]._vertexLookup.Count; j++)
+                {
+                    var vertex = _physicsObjects[i]._vertexLookup[j];
+                    vertex.Speed += Vector3d.UnitY;
+                    _physicsObjects[i]._vertexLookup[j] = vertex;
+                }
+            }
+            // _physicsObjects[i].Update(_physicsObjects, args.Time);
+            var taskNum = i;
+            physicsUpdateTasks[taskNum] = Task.Factory.StartNew(() => _physicsObjects[taskNum].Update(_physicsObjects, args.Time));
         }
-        
+
+        foreach (var task in physicsUpdateTasks)
+        {
+            task.Wait();
+        }
+
         base.OnUpdateFrame(args);
     }
 
