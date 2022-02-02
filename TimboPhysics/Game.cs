@@ -10,15 +10,15 @@ namespace TimboPhysics;
 public class Game : GameWindow
 {
     double[][] _vertices = {
-        new [] {15,  -15, -15,  1.0, 1.0}, //top right back     0
-        new [] {15, -15, -15,  0.0, 0.0}, //bottom right back  1
-        new [] {-15, -15, -15,  1.0, 0.0}, //bottom left back   2
-        new [] {-15,  -15, -15,  0.0, 1.0}, //top left back      3
+        new [] { 15,-15,-15, 0, 1, 0, 1.0, 1.0 }, //top right back     0
+        new [] { 15,-15,-15, 0, 0, 0, 0.0, 0.0 }, //bottom right back  1
+        new [] {-15,-15,-15, 0, 0, 0, 1.0, 0.0 }, //bottom left back   2
+        new [] {-15,-15,-15, 0, 1, 0, 0.0, 1.0 }, //top left back      3
         
-        new [] {15,  -15,  15,  1.0, 0.0}, //top right front    4
-        new [] {15, -15,  15,  0.0, 1.0}, //bottom right front 5
-        new [] {-15, -15,  15,  1.0, 1.0}, //bottom left front  6
-        new [] {-15,  -15,  15,  0.0, 0.0}, //top left front     7
+        new [] { 15,-15, 15, 0, 1, 0, 1.0, 0.0 }, //top right front    4
+        new [] { 15,-15, 15, 0, 0, 0, 0.0, 1.0 }, //bottom right front 5
+        new [] {-15,-15, 15, 0, 0, 0, 1.0, 1.0 }, //bottom left front  6
+        new [] {-15,-15, 15, 0, 1, 0, 0.0, 0.0 }, //top left front     7
     };
     
     static float X=0.525731112119133606f;
@@ -41,7 +41,7 @@ public class Game : GameWindow
     };
 
     private List<RenderObject> _renderObjects = new ();
-    private List<PhysicsObject> _physicsObjects = new ();
+    private List<Softbody> _physicsObjects = new ();
     private Shader _shader;
     private Stopwatch _timer;
     private float _AspectRatio = 1;
@@ -72,7 +72,7 @@ public class Game : GameWindow
         GL.Enable(EnableCap.DepthTest);
         GL.ClearColor(new Color4(0.2f,0.2f,1f,1f));
         
-        _shader = new Shader("Shaders/texture.vert", "Shaders/texture.frag");
+        _shader = new Shader("Shaders/lighting.vert", "Shaders/lighting.frag");
         var logThread = new Thread(Log);
         logThread.Start();
 
@@ -80,8 +80,8 @@ public class Game : GameWindow
         _renderObjects.Insert(0,new RenderObject(_vertices, _indices, _shader));
         for (int i = 0; i < 20; i++)
         {
-            var icosphere = new Icosphere(i%4, new Vector3d(i%6,1*i,(i*-1)%6), this);
-            _physicsObjects.Insert(i, new PhysicsObject(icosphere.Vertices, icosphere.Indices, icosphere.IndexLookup, _shader, false, true));
+            var icosphere = new Icosphere(i%3, new Vector3d(i%6,1*i,(i*-1)%6), this);
+            _physicsObjects.Insert(i, new Softbody(icosphere.Vertices, icosphere.Indices, icosphere.IndexLookup, _shader, false, true));
         }
         _timer.Start();
         base.OnLoad();
@@ -143,7 +143,6 @@ public class Game : GameWindow
                     _physicsObjects[i]._vertexLookup[j] = vertex;
                 }
             }
-            // _physicsObjects[i].Update(_physicsObjects, args.Time);
             var taskNum = i;
             physicsUpdateTasks[taskNum] = Task.Factory.StartNew(() => _physicsObjects[taskNum].Update(_physicsObjects, args.Time));
         }
@@ -164,11 +163,11 @@ public class Game : GameWindow
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         for (int i = 0; i < _renderObjects.Count; i++)
         {
-            _renderObjects[i].Render(_camera.GetViewMatrix(), _camera.GetProjectionMatrix());
+            _renderObjects[i].Render(_camera.GetViewMatrix(), _camera.GetProjectionMatrix(), _camera.Position);
         }
         for (int i = 0; i < _physicsObjects.Count; i++)
         {
-            _physicsObjects[i].Render(_camera.GetViewMatrix(), _camera.GetProjectionMatrix());
+            _physicsObjects[i].Render(_camera.GetViewMatrix(), _camera.GetProjectionMatrix(), _camera.Position);
         }
         
         Context.SwapBuffers();

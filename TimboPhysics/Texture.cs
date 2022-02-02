@@ -28,7 +28,7 @@ public class Texture
                 pixels.Add(row[x].R);
                 pixels.Add(row[x].G);
                 pixels.Add(row[x].B);
-                pixels.Add((byte)0);
+                pixels.Add(0);
             }
         }
         

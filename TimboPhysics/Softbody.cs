@@ -4,7 +4,7 @@ using OpenTK.Mathematics;
 
 namespace TimboPhysics;
 
-public class PhysicsObject : RenderObject
+public class Softbody : RenderObject
 {
     private bool _gravity;
     private bool _collision;
@@ -27,7 +27,7 @@ public class PhysicsObject : RenderObject
         }
     }
 
-    public PhysicsObject(double[][] vertices, uint[] indices, Dictionary<Vector3d, uint> indexLookup, Shader shader, bool collision, bool gravity) 
+    public Softbody(double[][] vertices, uint[] indices, Dictionary<Vector3d, uint> indexLookup, Shader shader, bool collision, bool gravity) 
         : base(vertices, indices, shader)
     {
         _gravity = gravity;
@@ -60,7 +60,7 @@ public class PhysicsObject : RenderObject
     private Dictionary<uint,PhysicsVertex> NextPositions(
         Dictionary<uint,PhysicsVertex> baseVertices, 
         Dictionary<uint,PhysicsVertex> outVertices, 
-        List<PhysicsObject> collisionObjects, 
+        List<Softbody> collisionObjects, 
         double timeStep)
     {
         // Clone input dictionaries because dict is reference type
@@ -85,10 +85,10 @@ public class PhysicsObject : RenderObject
                 centerPos);
         }
 
-        const double springConst = 3000;
-        const double springOffset = 0.125;
+        const double springConst = 600;
+        const double springOffset = 0.33;
         const double dampingFactor = 4;
-        const double pressure = 12000;
+        const double pressure = 1000;
         const double gravity = 0.5;
         const double attraction = 0.015;
 
@@ -232,12 +232,13 @@ public class PhysicsObject : RenderObject
             var newPos = _vertexLookup[index].Position;
             _indexLookup.Remove(oldPos);
             _indexLookup[newPos] = index;
-            _vertices[i] = new[] {newPos.X, newPos.Y, newPos.Z, _vertices[i][3], _vertices[i][4]};
+            var fakeNormal = (newPos - _center);
+            _vertices[i] = new[] {newPos.X, newPos.Y, newPos.Z, fakeNormal.X, fakeNormal.Y, fakeNormal.Z, _vertices[i][6], _vertices[i][7]};
         }
         _flattenedVertices = _vertices.SelectMany(x => x).ToArray();
     }
 
-    public Dictionary<uint, PhysicsVertex> RK4Integrate(Dictionary<uint, PhysicsVertex> vertices, List<PhysicsObject> collisionObjects, double timeStep)
+    public Dictionary<uint, PhysicsVertex> RK4Integrate(Dictionary<uint, PhysicsVertex> vertices, List<Softbody> collisionObjects, double timeStep)
     {
         var k1 = NextPositions(vertices, vertices, collisionObjects, timeStep);
         var k1mid = NextPositions(vertices, vertices, collisionObjects, timeStep/2);
@@ -262,7 +263,7 @@ public class PhysicsObject : RenderObject
     }
     
 
-    public void Update(List<PhysicsObject> collisionObjects, double deltaTime)
+    public void Update(List<Softbody> collisionObjects, double deltaTime)
     {
         
         //Only useful for increased accuracy in single object/collisionless simulations 
@@ -271,12 +272,12 @@ public class PhysicsObject : RenderObject
         _vertexLookup = NextPositions(_vertexLookup,  _vertexLookup, collisionObjects, 0.005);
     }
 
-    public override void Render(Matrix4 view, Matrix4 projection)
+    public override void Render(Matrix4 view, Matrix4 projection, Vector3 viewPos)
     {
         UpdateVertices();
         GL.BindVertexArray(_VAO);
         GL.BindBuffer(BufferTarget.ArrayBuffer, _VBO);
         GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, _flattenedVertices.Length * sizeof(double), _flattenedVertices);
-        base.Render(view, projection);
+        base.Render(view, projection, viewPos);
     }
 }

@@ -146,10 +146,9 @@ public class Icosphere
         {
             log.logInt = count++;
             var tx = GetSphereCoord(a-offset);
-            return new [] { a.X,a.Y,a.Z, tx.X, tx.Y};
+            return new [] { a.X,a.Y,a.Z, 0, 0, 0, tx.X, tx.Y};
         }).ToArray();
         log.log = "Loaded";
         log.logInt = 0;
-        ;
     }
 }
