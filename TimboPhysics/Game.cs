@@ -39,7 +39,6 @@ public class Game : GameWindow
         2, 1, 5,
         5, 6, 2
     };
-
     private List<RenderObject> _renderObjects = new ();
     private List<Softbody> _physicsObjects = new ();
     private Shader _shader;
@@ -78,10 +77,10 @@ public class Game : GameWindow
 
         log = "Files Loaded";
         _renderObjects.Insert(0,new RenderObject(_vertices, _indices, _shader));
-        for (int i = 0; i < 20; i++)
+        for (int i = 0; i < 8; i++)
         {
-            var icosphere = new Icosphere(i%3, new Vector3d(i%6,1*i,(i*-1)%6), this);
-            _physicsObjects.Insert(i, new Softbody(icosphere.Vertices, icosphere.Indices, icosphere.IndexLookup, _shader, false, true));
+            var icosphere = new Icosphere(i%4, new Vector3d(i%6,1*i,(i*-1)%6), this);
+            _physicsObjects.Insert(i, new Softbody(icosphere.Vertices, icosphere.Indices, _shader, true, true));
         }
         _timer.Start();
         base.OnLoad();
@@ -158,7 +157,7 @@ public class Game : GameWindow
     private int _frames = 0;
     protected override void OnRenderFrame(FrameEventArgs args)
     {
-        Console.WriteLine(_frames / _timer.Elapsed.TotalSeconds);
+        // Console.WriteLine(_frames / _timer.Elapsed.TotalSeconds);
         
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         for (int i = 0; i < _renderObjects.Count; i++)

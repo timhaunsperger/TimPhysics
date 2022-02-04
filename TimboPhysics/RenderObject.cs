@@ -7,9 +7,9 @@ public class RenderObject
 {
 
     private readonly Shader _shader;
-    public double[][] _vertices;
+    protected double[][] _vertices;
     protected double[] _flattenedVertices;
-    protected readonly uint[] _indices;
+    private readonly uint[] _indices;
     protected int _VAO;
     protected int _VBO;
     private int _EBO;
