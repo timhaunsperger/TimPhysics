@@ -72,7 +72,7 @@ public class Icosphere
         return uv;
     }
     
-    public Icosphere(int recursion, Vector3d offset, Game log)
+    public Icosphere(int recursion, Vector3d offset)
     {
         for (int i = 0; i < _baseindices.Length; i+=3)
         {
@@ -109,13 +109,10 @@ public class Icosphere
                 newFaces[j+2] = new Face(v5, v4, v2);
                 newFaces[j+3] = new Face(v3, v4, v5);
                 ji++;
-                log.log = i + " " + j;
             }
             faces = newFaces;
-            log.log = faces.GetLength(0).ToString();
         }
-        log.log = "vertArray loading";
-        
+
         var outVertices = new List<Vector3d>();
         uint lastVert = 0;
         
@@ -136,19 +133,13 @@ public class Icosphere
                 Indices[indexNum] = IndexLookup[vertex + offset];
                 indexNum++;
             }
-            log.logInt = i;
         }
-
-        log.log = "adding Textures";
 
         var count = 0;
         Vertices = outVertices.Select(a =>
         {
-            log.logInt = count++;
             var tx = GetSphereCoord(a-offset);
             return new [] { a.X,a.Y,a.Z, 0, 0, 0, tx.X, tx.Y};
         }).ToArray();
-        log.log = "Loaded";
-        log.logInt = 0;
     }
 }

@@ -37,9 +37,7 @@ public class Softbody : PhysicsObject
     }
 
     private Dictionary<uint,PhysicsVertex> NextPositions(
-        Dictionary<uint,PhysicsVertex> Vertices,
-        List<PhysicsObject> collisionObjects, 
-        double timeStep)
+        Dictionary<uint,PhysicsVertex> Vertices, List<PhysicsObject> collisionObjects, double timeStep)
     {
         // Clone input dictionary because dict is reference type
         Vertices = new Dictionary<uint, PhysicsVertex>(Vertices);
@@ -55,12 +53,12 @@ public class Softbody : PhysicsObject
                 _center);
         }
 
-        const double springConst = 800;
-        const double springOffset = 0.125;
+        const double springConst = 2000;
+        const double springOffset = 0.25;
         const double dampingFactor = 2;
-        const double pressure = 800;
+        const double pressure = 4000;
         const double gravity = 0.5;
-        const double attraction = 0.025;
+        const double attraction = 0;
 
         foreach (var face in _faces)
         {
@@ -94,15 +92,15 @@ public class Softbody : PhysicsObject
                     faceVertices[i].Speed -= Vector3d.UnitY * gravity * timeStep;
                     faceVertices[i].Speed += (Vector3d.UnitY * -15 - faceVertices[i].Position) * timeStep * attraction;
                     
-                    if (faceVertices[i].Position.Y < floor)  // Floor collision
-                    {
-                        faceVertices[i].Position.Y = floor;
-                        if (faceVertices[i].Speed.Y < 0)
-                        {
-                            faceVertices[i].Speed.Y = 0;
-                            faceVertices[i].Speed *= 0.98;
-                        }
-                    }
+                    // if (faceVertices[i].Position.Y < floor)  // Floor collision
+                    // {
+                    //     faceVertices[i].Position.Y = floor;
+                    //     if (faceVertices[i].Speed.Y < 0)
+                    //     {
+                    //         faceVertices[i].Speed.Y = 0;
+                    //         faceVertices[i].Speed *= 0.98;
+                    //     }
+                    // }
                 }
             }
             //Apply Changes
@@ -124,19 +122,9 @@ public class Softbody : PhysicsObject
         
         return Vertices;
     }
-
-    public void UpdateVertices()
-    {
-        for (uint i = 0; i < _vertexLookup.Count; i++)
-        {
-            var newPos = _vertexLookup[i].Position;
-            var fakeNormal = (newPos - _center);
-            _vertices[i] = new[] {newPos.X, newPos.Y, newPos.Z, fakeNormal.X, fakeNormal.Y, fakeNormal.Z, _vertices[i][6], _vertices[i][7]};
-        }
-        _flattenedVertices = _vertices.SelectMany(x => x).ToArray();
-    }
     public override void Update(List<PhysicsObject> collisionObjects, double deltaTime)
     {
         _vertexLookup = NextPositions(_vertexLookup, collisionObjects, 0.005);
+        base.Update(collisionObjects, deltaTime);
     }
 }

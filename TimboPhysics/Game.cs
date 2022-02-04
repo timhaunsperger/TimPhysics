@@ -20,11 +20,7 @@ public class Game : GameWindow
         new [] {-15,-15, 15, 0, 0, 0, 1.0, 1.0 }, //bottom left front  6
         new [] {-15,-15, 15, 0, 1, 0, 0.0, 0.0 }, //top left front     7
     };
-    
-    static float X=0.525731112119133606f;
-    static float Z=0.850650808352039932f;
-    static float N=0f;
-    
+
     uint[] _indices = {
         0, 1, 2,
         2, 3, 0,
@@ -49,7 +45,7 @@ public class Game : GameWindow
     public Game(GameWindowSettings gameSettings, NativeWindowSettings nativeSettings) 
         : base(gameSettings, nativeSettings)
     {
-        _camera = new Camera(new Vector3(0, -5,10), _AspectRatio);
+        _camera = new Camera(new Vector3(0, 5,10), _AspectRatio);
         CursorVisible = false;
         CursorGrabbed = true;
     }
@@ -76,11 +72,19 @@ public class Game : GameWindow
         logThread.Start();
 
         log = "Files Loaded";
-        _renderObjects.Insert(0,new RenderObject(_vertices, _indices, _shader));
-        for (int i = 0; i < 8; i++)
+        var floor = new RectPrism(new Vector3d(0,-15,0), 30, 0.5, 30, Quaterniond.FromEulerAngles(0, 0, 0));
+        _physicsObjects.Add(new Staticbody(floor.Vertices, floor.Indices, _shader, true));
+        for (int i = 0; i < 3; i++)
         {
-            var icosphere = new Icosphere(i%3+1, new Vector3d(i%6,1*i,(i*-1)%6), this);
-            _physicsObjects.Insert(i, new Softbody(icosphere.Vertices, icosphere.Indices, _shader, true, true));
+            var rectPrism = new RectPrism(new Vector3d(i%2*10-5,10*i-10,0), 8, 0.5, 2, Quaterniond.FromEulerAngles(45*i%2>0?1:-1, 0, 0));
+            
+            _physicsObjects.Add(new Staticbody(rectPrism.Vertices, rectPrism.Indices, _shader, true));
+        }
+        for (int i = 0; i < 24; i++)
+        {
+            var icosphere = new Icosphere(i%2+1, new Vector3d(-i%6-3,3*i+10,0));
+            
+            _physicsObjects.Add(new Softbody(icosphere.Vertices, icosphere.Indices, _shader, true, true));
         }
         _timer.Start();
         base.OnLoad();
@@ -138,7 +142,7 @@ public class Game : GameWindow
                 for (uint j = 0; j < _physicsObjects[i]._vertexLookup.Count; j++)
                 {
                     var vertex = _physicsObjects[i]._vertexLookup[j];
-                    vertex.Speed += Vector3d.UnitY;
+                    vertex.Speed += Vector3d.UnitY/10;
                     _physicsObjects[i]._vertexLookup[j] = vertex;
                 }
             }

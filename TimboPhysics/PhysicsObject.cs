@@ -54,16 +54,16 @@ public class PhysicsObject : RenderObject
     }
     
     //Checks for and responds to collisions with another specific physics object
-    protected void Collision(PhysicsObject collisionObject, Dictionary<uint, PhysicsVertex> Vertices)
+    protected void Collision(PhysicsObject collisionObject, Dictionary<uint, PhysicsVertex> vertices)
     {
         // Prevents collision with collision disabled objects
         if (!_collision || !collisionObject._collision)
         {
             return;
         }
-        foreach (var vertex in Vertices.Keys)
+        foreach (var vertex in vertices.Keys)
         {
-            if ((collisionObject._center-Vertices[vertex].Position).Length > collisionObject._maxRadius)
+            if ((collisionObject._center-vertices[vertex].Position).Length > collisionObject._maxRadius)
             {
                 // Prevents unnecessary calculations if vertex is outside bounding radius of collisionObject
                 continue;
@@ -78,7 +78,7 @@ public class PhysicsObject : RenderObject
                     collisionObject._vertexLookup[face[0]].Position,
                     collisionObject._vertexLookup[face[1]].Position,
                     collisionObject._vertexLookup[face[2]].Position,
-                    Vertices[vertex].Position);
+                    vertices[vertex].Position);
                 if (distance < 0)
                 {
                     isColliding = false;
@@ -95,18 +95,33 @@ public class PhysicsObject : RenderObject
             // Moves vertex and closest face apart, then reflects their velocities
             if (isColliding)
             {
-                var forceVertex = Vertices[vertex];
-                var forceVector = _center - forceVertex.Position;
+                var forceVertex = vertices[vertex];
+                Vector3d forceVector;
+                if (collisionObject.GetType() == typeof(Softbody))
+                {
+                    forceVector = (_center - forceVertex.Position).Normalized();
+                }
+                else
+                {
+                    forceVector = TMathUtils.GetNormal(
+                        collisionObject._vertexLookup[closestFace[0]].Position,
+                        collisionObject._vertexLookup[closestFace[1]].Position,
+                        collisionObject._vertexLookup[closestFace[2]].Position);
+                }
+
                 for (int i = 0; i < 3; i++)
                 {
-                    var faceVertex = collisionObject._vertexLookup[closestFace[i]];
-                    faceVertex.Position -= forceVector * closestFaceDist/2;
-                    faceVertex.Speed += 2*Vector3d.Dot(forceVector * -1, faceVertex.Speed) * forceVector;
-                    collisionObject._vertexLookup[closestFace[i]] = faceVertex;
+                    if (collisionObject.GetType() != typeof(Staticbody))
+                    {
+                        var faceVertex = collisionObject._vertexLookup[closestFace[i]];
+                        faceVertex.Position -= forceVector * closestFaceDist/2;
+                        faceVertex.Speed += 2*Vector3d.Dot(forceVector * -1 * closestFaceDist, faceVertex.Speed) * forceVector;
+                        collisionObject._vertexLookup[closestFace[i]] = faceVertex;
+                    }
                 }
-                forceVertex.Position += forceVector * closestFaceDist/2;
-                forceVertex.Speed -= 2*Vector3d.Dot(forceVector, forceVertex.Speed) * forceVector;
-                Vertices[vertex] = forceVertex;
+                forceVertex.Position += forceVector * closestFaceDist;
+                forceVertex.Speed -= 2*Vector3d.Dot(forceVector * closestFaceDist, forceVertex.Speed) * forceVector;
+                vertices[vertex] = forceVertex;
             }
         }
     }
@@ -148,13 +163,12 @@ public class PhysicsObject : RenderObject
     //Allows for update method visibility when class extensions are saved to PhysicsObject list
     public virtual void Update(List<PhysicsObject> collisionObjects, double deltaTime)
     {
-        
+        UpdateVertices();
     }
 
     //sets OpenGl buffer data to flattened vertex array
     public override void Render(Matrix4 view, Matrix4 projection, Vector3 viewPos)
     {
-        UpdateVertices();
         GL.BindVertexArray(_VAO);
         GL.BindBuffer(BufferTarget.ArrayBuffer, _VBO);
         GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, _flattenedVertices.Length * sizeof(double), _flattenedVertices);
