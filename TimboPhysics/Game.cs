@@ -40,7 +40,7 @@ public class Game : GameWindow
         5, 6, 2
     };
     private List<RenderObject> _renderObjects = new ();
-    private List<Softbody> _physicsObjects = new ();
+    private List<PhysicsObject> _physicsObjects = new ();
     private Shader _shader;
     private Stopwatch _timer;
     private float _AspectRatio = 1;
@@ -79,7 +79,7 @@ public class Game : GameWindow
         _renderObjects.Insert(0,new RenderObject(_vertices, _indices, _shader));
         for (int i = 0; i < 8; i++)
         {
-            var icosphere = new Icosphere(i%4, new Vector3d(i%6,1*i,(i*-1)%6), this);
+            var icosphere = new Icosphere(i%3+1, new Vector3d(i%6,1*i,(i*-1)%6), this);
             _physicsObjects.Insert(i, new Softbody(icosphere.Vertices, icosphere.Indices, _shader, true, true));
         }
         _timer.Start();

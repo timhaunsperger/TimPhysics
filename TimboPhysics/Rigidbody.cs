@@ -2,12 +2,12 @@
 
 namespace TimboPhysics;
 
-public class Softbody : PhysicsObject
+public class Rigidbody : PhysicsObject
 {
     private bool _gravity;
     private double floor = -15f;
 
-    public Softbody(double[][] vertices, uint[] indices, Shader shader, bool collision, bool gravity) 
+    public Rigidbody(double[][] vertices, uint[] indices, Shader shader, bool collision, bool gravity) 
         : base(vertices, indices, shader, collision)
     {
         _gravity = gravity;
@@ -55,10 +55,10 @@ public class Softbody : PhysicsObject
                 _center);
         }
 
-        const double springConst = 800;
+        const double springConst = 200;
         const double springOffset = 0.125;
         const double dampingFactor = 2;
-        const double pressure = 800;
+        const double pressure = 400;
         const double gravity = 0.5;
         const double attraction = 0.025;
 

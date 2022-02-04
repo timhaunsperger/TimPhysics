@@ -7,10 +7,10 @@ namespace TimboPhysics;
 public class PhysicsObject : RenderObject
 {
     protected bool _collision;
-    protected Vector3d _center;
+    public Vector3d _center;
     public Dictionary<uint, PhysicsVertex> _vertexLookup;
     protected uint[][] _faces;  // Array of arrays storing which vertices are connected to form faces
-    protected double _maxRadius;
+    public double _maxRadius;
 
     //Stores data for state of each vertex
     public struct PhysicsVertex
@@ -96,7 +96,7 @@ public class PhysicsObject : RenderObject
             if (isColliding)
             {
                 var forceVertex = Vertices[vertex];
-                var forceVector = (_center - forceVertex.Position).Normalized();
+                var forceVector = _center - forceVertex.Position;
                 for (int i = 0; i < 3; i++)
                 {
                     var faceVertex = collisionObject._vertexLookup[closestFace[i]];
@@ -146,7 +146,7 @@ public class PhysicsObject : RenderObject
     }
     
     //Allows for update method visibility when class extensions are saved to PhysicsObject list
-    public virtual void Update(List<Softbody> collisionObjects, double deltaTime)
+    public virtual void Update(List<PhysicsObject> collisionObjects, double deltaTime)
     {
         
     }
