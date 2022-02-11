@@ -76,11 +76,11 @@ public class Game : GameWindow
         _physicsObjects.Add(new Staticbody(floor.Vertices, floor.Indices, _shader, true));
         for (int i = 0; i < 3; i++)
         {
-            var rectPrism = new RectPrism(new Vector3d(i%2*10-5,10*i-10,0), 8, 0.5, 2, Quaterniond.FromEulerAngles(45*i%2>0?1:-1, 0, 0));
+            var rectPrism = new RectPrism(new Vector3d(i%2*10-5,10*i-10,0), 13, 0.5, 5, Quaterniond.FromEulerAngles(45*i%2>0?1:-1, 0, 0));
             
             _physicsObjects.Add(new Staticbody(rectPrism.Vertices, rectPrism.Indices, _shader, true));
         }
-        for (int i = 0; i < 24; i++)
+        for (int i = 0; i < 40; i++)
         {
             var icosphere = new Icosphere(i%2+1, new Vector3d(-i%6-3,3*i+10,0));
             

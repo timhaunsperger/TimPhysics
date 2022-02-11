@@ -56,9 +56,9 @@ public class Softbody : PhysicsObject
         const double springConst = 2000;
         const double springOffset = 0.25;
         const double dampingFactor = 2;
-        const double pressure = 4000;
+        const double pressure = 8000;
         const double gravity = 0.5;
-        const double attraction = 0;
+        const double attraction = 0.03;
 
         foreach (var face in _faces)
         {
