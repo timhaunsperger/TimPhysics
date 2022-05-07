@@ -5,35 +5,11 @@ namespace TimboPhysics;
 public class Softbody : PhysicsObject
 {
     private bool _gravity;
-    private double floor = -15f;
 
     public Softbody(double[][] vertices, uint[] indices, Shader shader, bool collision, bool gravity) 
         : base(vertices, indices, shader, collision)
     {
         _gravity = gravity;
-        _collision = collision;
-        _vertexLookup = new Dictionary<uint, PhysicsVertex>();
-        _faces = new uint[indices.Length/3][];
-        
-        for (int i = 0; i < indices.Length; i++)
-        {
-            if (!_vertexLookup.ContainsKey(indices[i]))
-            {
-                var vertexPos = new Vector3d(vertices[indices[i]][0], vertices[indices[i]][1], vertices[indices[i]][2]);
-                _vertexLookup[indices[i]] = new PhysicsVertex(vertexPos, Vector3d.Zero);
-                _center += vertexPos;
-            }
-
-            if (i%3==2)
-            {
-                _faces[i/3] = new uint[3];
-                _faces[i/3][0] = indices[i-2];
-                _faces[i/3][1] = indices[i-1];
-                _faces[i/3][2] = indices[i-0];
-            }
-        }
-
-        _center /= _vertexLookup.Count;
     }
 
     private Dictionary<uint,PhysicsVertex> NextPositions(
@@ -53,11 +29,11 @@ public class Softbody : PhysicsObject
                 _center);
         }
 
-        const double springConst = 2000;
-        const double springOffset = 0.25;
-        const double dampingFactor = 2;
-        const double pressure = 8000;
-        const double gravity = 0.5;
+        const double springConst = 4000;
+        const double springOffset = 0.15;
+        const double dampingFactor = 4;
+        const double pressure = 5000;
+        const double gravity = 1;
         const double attraction = 0.03;
 
         foreach (var face in _faces)
@@ -90,17 +66,6 @@ public class Softbody : PhysicsObject
                 if (_gravity)
                 {
                     faceVertices[i].Speed -= Vector3d.UnitY * gravity * timeStep;
-                    faceVertices[i].Speed += (Vector3d.UnitY * -15 - faceVertices[i].Position) * timeStep * attraction;
-                    
-                    // if (faceVertices[i].Position.Y < floor)  // Floor collision
-                    // {
-                    //     faceVertices[i].Position.Y = floor;
-                    //     if (faceVertices[i].Speed.Y < 0)
-                    //     {
-                    //         faceVertices[i].Speed.Y = 0;
-                    //         faceVertices[i].Speed *= 0.98;
-                    //     }
-                    // }
                 }
             }
             //Apply Changes

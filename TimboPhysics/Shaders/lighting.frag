@@ -16,10 +16,10 @@ void main()
     vec3 lightColor = vec3(1,1,1);
     vec3 ambient = ambientStrength * lightColor;
     
-    vec3 lightPos = vec3(0, 10, 0);
+    vec3 lightPos = vec3(0, 100, 0);
     vec3 lightDir = normalize(lightPos - FragPos);
     vec3 norm = normalize(Normal);
-    float diff = max(dot(norm, lightDir), 0.0);
+    float diff = sqrt(max(dot(norm, lightDir), 0.0));
     vec3 diffuse = diff * lightColor;
     
     float specularStrength = 0.7;

@@ -51,6 +51,7 @@ public class PhysicsObject : RenderObject
         }
 
         _center /= _vertexLookup.Count;
+        UpdateValues(_vertexLookup, 0);
     }
     
     //Checks for and responds to collisions with another specific physics object
@@ -99,11 +100,11 @@ public class PhysicsObject : RenderObject
                 Vector3d forceVector;
                 if (collisionObject.GetType() == typeof(Softbody))
                 {
-                    forceVector = (_center - forceVertex.Position).Normalized();
+                    forceVector = (_center - forceVertex.Position).Normalized(); // Determine collision vector
                 }
                 else
                 {
-                    forceVector = TMathUtils.GetNormal(
+                    forceVector = TMathUtils.GetNormal(  // Uses normal of face if non-Softbody
                         collisionObject._vertexLookup[closestFace[0]].Position,
                         collisionObject._vertexLookup[closestFace[1]].Position,
                         collisionObject._vertexLookup[closestFace[2]].Position);
@@ -111,16 +112,21 @@ public class PhysicsObject : RenderObject
 
                 for (int i = 0; i < 3; i++)
                 {
-                    if (collisionObject.GetType() != typeof(Staticbody))
+                    if (collisionObject.GetType() != typeof(Staticbody)) // Staticbodies dont move during collisions
                     {
                         var faceVertex = collisionObject._vertexLookup[closestFace[i]];
                         faceVertex.Position -= forceVector * closestFaceDist/2;
                         faceVertex.Speed += 2*Vector3d.Dot(forceVector * -1 * closestFaceDist, faceVertex.Speed) * forceVector;
+                        faceVertex.Speed *= 0.9;
                         collisionObject._vertexLookup[closestFace[i]] = faceVertex;
                     }
                 }
-                forceVertex.Position += forceVector * closestFaceDist;
+                // object responsible for full restitution if other is static
+                forceVertex.Position += forceVector * closestFaceDist / (collisionObject.GetType() == typeof(Staticbody) ? 1 : 2); 
+                // reflects velocity over collision vector 
                 forceVertex.Speed -= 2*Vector3d.Dot(forceVector * closestFaceDist, forceVertex.Speed) * forceVector;
+                //friction
+                forceVertex.Speed *= 0.9;
                 vertices[vertex] = forceVertex;
             }
         }

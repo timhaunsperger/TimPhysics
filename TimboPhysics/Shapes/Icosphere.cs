@@ -7,7 +7,8 @@ public class Icosphere
     static double X=0.525731112119133606;
     static double Z=0.850650808352039932;
     static double N=0;
-    private double[][] _baseVertices=
+    
+    private double[][] _baseVertices =  //positions for basic icosahedron vertices
     {
         new []{-X,N,Z}, 
         new []{X,N,Z}, 
@@ -22,8 +23,8 @@ public class Icosphere
         new []{Z,-X,N}, 
         new []{-Z,-X, N}
     };
-    
-    uint[] _baseindices = {
+    uint[] _baseindices =   //indices for faces of basic icosahedron
+    {  
         0,4,1,
         0,9,4,
         9,5,4,
@@ -51,7 +52,7 @@ public class Icosphere
     public Dictionary<Vector3d, uint> IndexLookup;
     private Face[] faces = new Face[20];
     
-    private struct Face
+    private struct Face // represents one side of the shape
     {
         public Vector3d[] faceVertices = new Vector3d[3];
 
@@ -70,6 +71,18 @@ public class Icosphere
         uv.Y = Math.Acos(i.Y / len) / Math.PI;
         uv.X = -(Math.Atan2(i.Z, i.X) / Math.PI + 1.0f) * 0.5f;
         return uv;
+    }
+    
+    public Icosphere(Icosphere sphere) //Cloning Constructor
+    {
+        Vertices = new double[sphere.Vertices.Length][];
+        for (int i = 0; i < sphere.Vertices.Length; i++)
+        {
+            Vertices[i] = (double[])sphere.Vertices[i].Clone();
+        }
+        Indices = (uint[])sphere.Indices.Clone();
+        IndexLookup = new Dictionary<Vector3d, uint>(sphere.IndexLookup);
+        faces = (Face[])sphere.faces.Clone();
     }
     
     public Icosphere(int recursion, Vector3d offset)
@@ -141,5 +154,6 @@ public class Icosphere
             var tx = GetSphereCoord(a-offset);
             return new [] { a.X,a.Y,a.Z, 0, 0, 0, tx.X, tx.Y};
         }).ToArray();
+        
     }
 }

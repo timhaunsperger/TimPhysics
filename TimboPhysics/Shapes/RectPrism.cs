@@ -4,7 +4,7 @@ namespace TimboPhysics;
 
 public class RectPrism
 {
-    double[][] _baseVertices = {
+    double[][] _baseVertices = {  // Positions of vertices for basic cube
         new [] { 1, 1,-1, 0, 1, 0, 1.0, 1.0 }, //top right back     0
         new [] { 1,-1,-1, 0, 0, 0, 0.0, 0.0 }, //bottom right back  1
         new [] {-1,-1,-1, 0, 0, 0, 1.0, 0.0 }, //bottom left back   2
@@ -16,7 +16,7 @@ public class RectPrism
         new [] {-1, 1, 1, 0, 1, 0, 0.0, 0.0 }, //top left front     7
     };
     
-    uint[] _baseindices = {
+    uint[] _baseindices = {  // Faces of basic cube
         2, 1, 0,
         0, 3, 2,
         0, 1, 5,
@@ -47,7 +47,7 @@ public class RectPrism
     {
         var outVertices = new Vector3d[8];
         
-        for (int i = 0; i < _baseVertices.Length; i++)
+        for (int i = 0; i < _baseVertices.Length; i++) // Scales position of cube vertex to size and rotation of rectangular prism
         {
             var scaledPos =  rotation * new Quaterniond(
                 _baseVertices[i][0] * width, _baseVertices[i][1] * height, _baseVertices[i][2] * depth, 0) * Quaterniond.Conjugate(rotation);
@@ -58,7 +58,7 @@ public class RectPrism
         Vertices = outVertices.Select(a =>
         {
             var tx = GetSphereCoord(a);
-            return new [] { a.X + offset.X,a.Y + offset.Y,a.Z + offset.Z, 0, 0, 0, tx.X, tx.Y};
+            return new [] { a.X + offset.X,a.Y + offset.Y,a.Z + offset.Z, a.X, a.Y, a.Z, tx.X, tx.Y};
         }).ToArray();
     }
 }

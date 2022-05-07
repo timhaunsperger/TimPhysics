@@ -35,6 +35,7 @@ public class Game : GameWindow
         2, 1, 5,
         5, 6, 2
     };
+    
     private List<RenderObject> _renderObjects = new ();
     private List<PhysicsObject> _physicsObjects = new ();
     private Shader _shader;
@@ -72,17 +73,17 @@ public class Game : GameWindow
         logThread.Start();
 
         log = "Files Loaded";
-        var floor = new RectPrism(new Vector3d(0,-15,0), 30, 0.5, 30, Quaterniond.FromEulerAngles(0, 0, 0));
+        var floor = new RectPrism(new Vector3d(0,-15,0), 300, 0.5, 300, Quaterniond.FromEulerAngles(0, 0, 0));
         _physicsObjects.Add(new Staticbody(floor.Vertices, floor.Indices, _shader, true));
         for (int i = 0; i < 3; i++)
         {
-            var rectPrism = new RectPrism(new Vector3d(i%2*10-5,10*i-10,0), 13, 0.5, 5, Quaterniond.FromEulerAngles(45*i%2>0?1:-1, 0, 0));
+            var rectPrism = new RectPrism(new Vector3d(i%2*13-5,10*i-10,0), 13, 0.5, 5, Quaterniond.FromEulerAngles(45*i%2>0?1:-1, 0, 0));
             
             _physicsObjects.Add(new Staticbody(rectPrism.Vertices, rectPrism.Indices, _shader, true));
         }
-        for (int i = 0; i < 40; i++)
+        for (int i = 0; i < 50; i++)
         {
-            var icosphere = new Icosphere(i%2+1, new Vector3d(-i%6-3,3*i+10,0));
+            var icosphere = SphereCache.GetSphere(2, new Vector3d(-i%6-3,i+14,0));
             
             _physicsObjects.Add(new Softbody(icosphere.Vertices, icosphere.Indices, _shader, true, true));
         }
