@@ -5,7 +5,6 @@ namespace TimboPhysics;
 
 public class RenderObject
 {
-
     private readonly Shader _shader;
     protected double[][] _vertices;
     protected double[] _flattenedVertices;
@@ -16,11 +15,11 @@ public class RenderObject
     private Texture _texture0;
     private Texture _texture1;
 
-    public RenderObject(double[][] vertices, uint[] indecies, Shader shader)
+    public RenderObject(Shape shape, Shader shader)
     {
-        _vertices = vertices;
-        _flattenedVertices = vertices.SelectMany(x => x).ToArray();
-        _indices = indecies;
+        _vertices = shape.Vertices;
+        _flattenedVertices = shape.Vertices.SelectMany(x => x).ToArray();
+        _indices = shape.Indices;
         _shader = shader;
         
         _VAO = GL.GenVertexArray();
@@ -47,8 +46,8 @@ public class RenderObject
         GL.VertexAttribPointer(aTexCoordsLocation, 2, VertexAttribPointerType.Double, false, 8 * sizeof(double), 6 * sizeof(double));
         
         _shader.Use();
-        _texture0 = new Texture("Textures/container.jpg");
-        _texture1 = new Texture("Textures/garfield.png");
+        _texture0 = TextureCache.GetTexture("Textures/container.jpg");
+        _texture1 = TextureCache.GetTexture("Textures/garfield.png");
         _shader.SetInt("texture0", 0);
         _shader.SetInt("texture1", 1);
     }

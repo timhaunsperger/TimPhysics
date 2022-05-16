@@ -6,10 +6,11 @@ public class Softbody : PhysicsObject
 {
     private bool _gravity;
 
-    public Softbody(double[][] vertices, uint[] indices, Shader shader, bool collision, bool gravity) 
-        : base(vertices, indices, shader, collision)
+    public Softbody(Shape shape, Shader shader, bool gravity) 
+        : base(shape, shader)
     {
         _gravity = gravity;
+        IsCenterStatic = false;
     }
 
     private Dictionary<uint,PhysicsVertex> NextPositions(
@@ -26,7 +27,7 @@ public class Softbody : PhysicsObject
                 Vertices[_faces[i][0]].Position,
                 Vertices[_faces[i][1]].Position,
                 Vertices[_faces[i][2]].Position,
-                _center);
+                Center);
         }
 
         const double springConst = 4000;
@@ -77,7 +78,7 @@ public class Softbody : PhysicsObject
         //Collision
         foreach (var collisionObject in collisionObjects)
         {
-            if (collisionObject != this && (collisionObject._center-_center).Length < collisionObject._maxRadius + _maxRadius)
+            if (collisionObject != this && (collisionObject.Center-Center).Length < collisionObject.Radius + Radius)
             {
                 Collision(collisionObject, Vertices);
             }

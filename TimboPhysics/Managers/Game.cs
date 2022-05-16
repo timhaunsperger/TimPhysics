@@ -9,37 +9,11 @@ namespace TimboPhysics;
 
 public class Game : GameWindow
 {
-    double[][] _vertices = {
-        new [] { 15,-15,-15, 0, 1, 0, 1.0, 1.0 }, //top right back     0
-        new [] { 15,-15,-15, 0, 0, 0, 0.0, 0.0 }, //bottom right back  1
-        new [] {-15,-15,-15, 0, 0, 0, 1.0, 0.0 }, //bottom left back   2
-        new [] {-15,-15,-15, 0, 1, 0, 0.0, 1.0 }, //top left back      3
-        
-        new [] { 15,-15, 15, 0, 1, 0, 1.0, 0.0 }, //top right front    4
-        new [] { 15,-15, 15, 0, 0, 0, 0.0, 1.0 }, //bottom right front 5
-        new [] {-15,-15, 15, 0, 0, 0, 1.0, 1.0 }, //bottom left front  6
-        new [] {-15,-15, 15, 0, 1, 0, 0.0, 0.0 }, //top left front     7
-    };
-
-    uint[] _indices = {
-        0, 1, 2,
-        2, 3, 0,
-        0, 1, 5,
-        5, 4, 0,
-        3, 2, 6,
-        6, 7, 3,
-        4, 5, 6,
-        6, 7, 4,
-        3, 0, 4,
-        4, 7, 3,
-        2, 1, 5,
-        5, 6, 2
-    };
-    
     private List<RenderObject> _renderObjects = new ();
     private List<PhysicsObject> _physicsObjects = new ();
+    private List<PhysicsParticle> _physicsParticles = new ();
+    public List<RenderObject> _collisionObjects = new();
     private Shader _shader;
-    private Stopwatch _timer;
     private float _AspectRatio = 1;
     private Camera _camera;
 
@@ -51,43 +25,53 @@ public class Game : GameWindow
         CursorGrabbed = true;
     }
 
-    public string log = "initial";
-    public int logInt = 0;
-
-    public void Log()
+    private void AddObject(RenderObject newObject, bool render, bool physics, bool particle, bool collision)
     {
-        while (true)
-        {
-            //Console.WriteLine(log + logInt);
-            Thread.Sleep(250);
-        }
+        if(render){ _renderObjects.Add(newObject);}
+        if(collision){_collisionObjects.Add(newObject);}
+        if(physics){_physicsObjects.Add((PhysicsObject)newObject);}
+        if(particle){_physicsParticles.Add((PhysicsParticle)newObject);}
     }
+    
     protected override void OnLoad()
     {
-        _timer = new Stopwatch();
         GL.Enable(EnableCap.DepthTest);
         GL.ClearColor(new Color4(0.2f,0.2f,1f,1f));
         
         _shader = new Shader("Shaders/lighting.vert", "Shaders/lighting.frag");
-        var logThread = new Thread(Log);
-        logThread.Start();
+        
+        var floor = new Staticbody(
+            new RectPrism(
+                new Vector3d(0,-15,0), 
+                300, 
+                0.5, 
+                300, 
+                Quaterniond.FromEulerAngles(0, 0, 0)), 
+            _shader);
+        //_renderObjects.Add(floor);
+        //_physicsObjects.Add(floor);
+        
+        
+        for (int i = 0; i < 0; i++)
+        {
+            _physicsObjects.Add(new Staticbody(
+                new RectPrism(
+                    new Vector3d(i%2*13-5,10*i-10,0),
+                    13, 
+                    0.5, 
+                    5, 
+                    Quaterniond.FromEulerAngles(45*i%2>0?1:-1, 0, 0)), 
+                _shader));
+        }
 
-        log = "Files Loaded";
-        var floor = new RectPrism(new Vector3d(0,-15,0), 300, 0.5, 300, Quaterniond.FromEulerAngles(0, 0, 0));
-        _physicsObjects.Add(new Staticbody(floor.Vertices, floor.Indices, _shader, true));
-        for (int i = 0; i < 3; i++)
+        var rand = new Random();
+        for (int i = 0; i < 600; i++)
         {
-            var rectPrism = new RectPrism(new Vector3d(i%2*13-5,10*i-10,0), 13, 0.5, 5, Quaterniond.FromEulerAngles(45*i%2>0?1:-1, 0, 0));
-            
-            _physicsObjects.Add(new Staticbody(rectPrism.Vertices, rectPrism.Indices, _shader, true));
+            //_physicsParticles.Add(new PhysicsParticle(new Vector3d(rand.NextDouble()*5 * (i%1-0.5), 2+i/5 , rand.NextDouble()*5 * (i%1-0.5)), 0.3, _shader));
+            var pm = i % 2 == 1 ? 1 : -1;
+            _physicsParticles.Add(new PhysicsParticle(pm,new Vector3d(rand.NextDouble()-0.5, rand.NextDouble()-0.5, rand.NextDouble()-0.5), 0.05, _shader));
         }
-        for (int i = 0; i < 50; i++)
-        {
-            var icosphere = SphereCache.GetSphere(2, new Vector3d(-i%6-3,i+14,0));
-            
-            _physicsObjects.Add(new Softbody(icosphere.Vertices, icosphere.Indices, _shader, true, true));
-        }
-        _timer.Start();
+        
         base.OnLoad();
     }
 
@@ -132,9 +116,9 @@ public class Game : GameWindow
         }
 
         _camera.Move(input, (float)args.Time);
-        _frames += 1;
 
-        var physicsUpdateTasks = new Task[_physicsObjects.Count];
+        var physicsObjectUpdateTasks = new Task[_physicsObjects.Count];
+        var physicsParticleUpdateTasks = new Task[_physicsParticles.Count];
         
         for (int i = 0; i < _physicsObjects.Count; i++)
         {
@@ -148,18 +132,27 @@ public class Game : GameWindow
                 }
             }
             var taskNum = i;
-            physicsUpdateTasks[taskNum] = Task.Factory.StartNew(() => _physicsObjects[taskNum].Update(_physicsObjects, args.Time));
+            physicsObjectUpdateTasks[taskNum] = Task.Factory.StartNew(() => _physicsObjects[taskNum].Update(_physicsObjects, args.Time));
         }
+        for (int i = 0; i < _physicsParticles.Count; i++)
+        {
+            var taskNum = i;
+            //physicsParticleUpdateTasks[taskNum] = Task.Factory.StartNew(() => _physicsParticles[taskNum].Update(_physicsParticles, args.Time));
+            _physicsParticles[taskNum].Update(_physicsParticles, args.Time);
+        }
+        Collision.ResolveCollision(_physicsParticles);
 
-        foreach (var task in physicsUpdateTasks)
+        foreach (var task in physicsObjectUpdateTasks)
         {
             task.Wait();
+        }
+        foreach (var task in physicsParticleUpdateTasks)
+        {
+            //task.Wait();
         }
 
         base.OnUpdateFrame(args);
     }
-
-    private int _frames = 0;
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         // Console.WriteLine(_frames / _timer.Elapsed.TotalSeconds);
@@ -172,6 +165,10 @@ public class Game : GameWindow
         for (int i = 0; i < _physicsObjects.Count; i++)
         {
             _physicsObjects[i].Render(_camera.GetViewMatrix(), _camera.GetProjectionMatrix(), _camera.Position);
+        }
+        for (int i = 0; i < _physicsParticles.Count; i++)
+        {
+            _physicsParticles[i].Render(_camera.GetViewMatrix(), _camera.GetProjectionMatrix(), _camera.Position);
         }
         
         Context.SwapBuffers();

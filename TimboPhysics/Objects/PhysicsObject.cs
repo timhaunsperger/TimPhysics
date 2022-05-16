@@ -5,12 +5,16 @@ using OpenTK.Mathematics;
 namespace TimboPhysics;
 
 public class PhysicsObject : RenderObject
-{
-    protected bool _collision;
-    public Vector3d _center;
+{ 
+    // Helper fields for Collision.cs
+    public List<int> CollidedObjects; 
+    public double Radius;
+    
+    public Vector3d Center;
+    protected bool IsCenterStatic;
+    
     public Dictionary<uint, PhysicsVertex> _vertexLookup;
     protected uint[][] _faces;  // Array of arrays storing which vertices are connected to form faces
-    public double _maxRadius;
 
     //Stores data for state of each vertex
     public struct PhysicsVertex
@@ -25,10 +29,11 @@ public class PhysicsObject : RenderObject
         }
     }
 
-    protected PhysicsObject(double[][] vertices, uint[] indices, Shader shader, bool collision)
-        : base(vertices, indices, shader)
+    protected PhysicsObject(Shape shape, Shader shader)
+        : base(shape, shader)
     {
-        _collision = collision;
+        var vertices = shape.Vertices;
+        var indices = shape.Indices;
         _vertexLookup = new Dictionary<uint, PhysicsVertex>();
         _faces = new uint[indices.Length/3][];
         
@@ -38,7 +43,7 @@ public class PhysicsObject : RenderObject
             {
                 var vertexPos = new Vector3d(vertices[indices[i]][0], vertices[indices[i]][1], vertices[indices[i]][2]);
                 _vertexLookup[indices[i]] = new PhysicsVertex(vertexPos, Vector3d.Zero);
-                _center += vertexPos;
+                Center += vertexPos;
             }
 
             if (i%3==2)
@@ -50,21 +55,16 @@ public class PhysicsObject : RenderObject
             }
         }
 
-        _center /= _vertexLookup.Count;
+        Center /= _vertexLookup.Count;
         UpdateValues(_vertexLookup, 0);
     }
     
     //Checks for and responds to collisions with another specific physics object
     protected void Collision(PhysicsObject collisionObject, Dictionary<uint, PhysicsVertex> vertices)
     {
-        // Prevents collision with collision disabled objects
-        if (!_collision || !collisionObject._collision)
-        {
-            return;
-        }
         foreach (var vertex in vertices.Keys)
         {
-            if ((collisionObject._center-vertices[vertex].Position).Length > collisionObject._maxRadius)
+            if ((collisionObject.Center-vertices[vertex].Position).Length > collisionObject.Radius)
             {
                 // Prevents unnecessary calculations if vertex is outside bounding radius of collisionObject
                 continue;
@@ -100,7 +100,7 @@ public class PhysicsObject : RenderObject
                 Vector3d forceVector;
                 if (collisionObject.GetType() == typeof(Softbody))
                 {
-                    forceVector = (_center - forceVertex.Position).Normalized(); // Determine collision vector
+                    forceVector = (Center - forceVertex.Position).Normalized(); // Determine collision vector
                 }
                 else
                 {
@@ -136,7 +136,7 @@ public class PhysicsObject : RenderObject
     protected void UpdateValues(Dictionary<uint, PhysicsVertex> Vertices, double timeStep)
     {
         var vertexPosSum = Vector3d.Zero;
-        _maxRadius = 0d;
+        Radius = 0d;
         for (uint i = 0; i < Vertices.Count; i++)
         {
             var vertex = Vertices[i];
@@ -144,13 +144,13 @@ public class PhysicsObject : RenderObject
             Vertices[i] = vertex;
                 
             vertexPosSum += vertex.Position;
-            if (_maxRadius < (vertex.Position-_center).Length)
+            if (Radius < (vertex.Position-Center).Length)
             {
-                _maxRadius = (vertex.Position - _center).Length;
+                Radius = (vertex.Position - Center).Length;
             }
                 
         }
-        _center = vertexPosSum/Vertices.Count;
+        Center = vertexPosSum/Vertices.Count;
     }
     
     //Updates vertex array with new positions and normals from physics vertices then flattens for use in OpenGL
@@ -160,7 +160,7 @@ public class PhysicsObject : RenderObject
         {
             var newPos = _vertexLookup[i].Position;
             // Vertex can not have an actual normal, but center to vertex vector is close enough approximation
-            var fakeNormal = (newPos - _center).Normalized(); 
+            var fakeNormal = (newPos - Center).Normalized(); 
             _vertices[i] = new[] {newPos.X, newPos.Y, newPos.Z, fakeNormal.X, fakeNormal.Y, fakeNormal.Z, _vertices[i][6], _vertices[i][7]};
         }
         _flattenedVertices = _vertices.SelectMany(x => x).ToArray();

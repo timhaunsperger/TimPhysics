@@ -20,15 +20,15 @@ public class Texture
         Image<Rgba32> image = Image.Load<Rgba32>(path);
         image.Mutate(x => x.Flip(FlipMode.Vertical));
         
-        var pixels = new List<byte>(4 * image.Width * image.Height);
+        var pixels = new byte[4 * image.Width * image.Height];
         for (int y = 0; y < image.Height; y++) {
             var row = image.GetPixelRowSpan(y);
 
             for (int x = 0; x < image.Width; x++) {
-                pixels.Add(row[x].R);
-                pixels.Add(row[x].G);
-                pixels.Add(row[x].B);
-                pixels.Add(0);
+                pixels[y*image.Width*4 + 4*x + 0] = row[x].R;
+                pixels[y*image.Width*4 + 4*x + 1] = row[x].G;
+                pixels[y*image.Width*4 + 4*x + 2] = row[x].B;
+                pixels[y*image.Width*4 + 4*x + 3] = 0;
             }
         }
         
