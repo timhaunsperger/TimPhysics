@@ -11,7 +11,8 @@ public static class TMathUtils
     
     public static Vector3d GetNormal(Vector3d p0, Vector3d p1, Vector3d p2)
     {
-        var invNormal = Vector3d.Cross(p1 - p0, p2 - p0).Normalized();
+        var invNormal = Vector3d.Cross(p1 - p0, p2 - p0);
+        invNormal /= invNormal.LengthFast;
         return invNormal * -1;
     }
     

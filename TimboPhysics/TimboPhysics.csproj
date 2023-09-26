@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
@@ -42,5 +42,6 @@
       <None Remove="Shapes\Icosphere7\vertices" />
       <None Remove="Shapes\Icosphere7\indices" />
     </ItemGroup>
+
 
 </Project>

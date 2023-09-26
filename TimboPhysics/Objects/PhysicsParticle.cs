@@ -15,7 +15,7 @@ public class PhysicsParticle : PhysicsObject
         var rand = new Random();
         Position = position;
         Radius = size;
-        Speed = new Vector3d(rand.NextDouble() * seed/2, rand.NextDouble() * seed/2, 0);
+        Speed = new Vector3d(rand.NextDouble() * seed * 4, rand.NextDouble() * seed * 4, rand.NextDouble() * seed * 4);
         IsCenterStatic = true;
         
         _vertexOffsets = new Vector3d[_vertices.Length];
@@ -28,11 +28,15 @@ public class PhysicsParticle : PhysicsObject
     private void NextPositions(double deltaTime)
     {
         //attraction
-        if (Position.Length > 2 && Vector3d.Dot(Position, Speed) > 0)
-        {
-            Speed -= 2 * Vector3d.Dot(Speed, -Position.Normalized()) * -Position.Normalized();
-        }
+        var attrCenter = Position - Vector3d.UnitY - (Vector3d.UnitX * 20);
         
+        var gravity = new Vector3d(0, -0.5, 0);
+        Speed += gravity;
+        Speed *= Math.Pow(0.99, Speed.Length);
+        if (attrCenter.Length > 8 && Vector3d.Dot(attrCenter, Speed) > 0)
+        {
+            Speed -= 2 * Vector3d.Dot(Speed, -attrCenter.Normalized()) * -attrCenter.Normalized();
+        }
         Position += Speed * deltaTime;
     }
 

@@ -30,12 +30,11 @@ public class Softbody : PhysicsObject
                 Center);
         }
 
-        const double springConst = 4000;
-        const double springOffset = 0.15;
-        const double dampingFactor = 4;
-        const double pressure = 5000;
+        const double springConst = 1000;
+        const double springOffset = 0.1;
+        const double dampingFactor = 0.5;
+        const double pressure = 3000;
         const double gravity = 1;
-        const double attraction = 0.03;
 
         foreach (var face in _faces)
         {
@@ -60,9 +59,11 @@ public class Softbody : PhysicsObject
                 
                 //Apply Damping Force
                 var relSpeed = faceVertices[i].Speed - faceVertices[(i + 1) % 3].Speed;
-                faceVertices[i].Speed += (relSpeed * -dampingFactor * timeStep);
-                faceVertices[(i + 1) % 3].Speed += (relSpeed * -dampingFactor * timeStep * -1);
-                
+                faceVertices[i].Speed += relSpeed * -dampingFactor * timeStep;
+                faceVertices[(i + 1) % 3].Speed += relSpeed * -dampingFactor * timeStep * -1;
+            }
+            for (uint i = 0; i < face.Length; i++)
+            {
                 //Apply Gravity
                 if (_gravity)
                 {
@@ -90,7 +91,8 @@ public class Softbody : PhysicsObject
     }
     public override void Update(List<PhysicsObject> collisionObjects, double deltaTime)
     {
-        _vertexLookup = NextPositions(_vertexLookup, collisionObjects, 0.005);
-        base.Update(collisionObjects, deltaTime);
+        _vertexLookup = NextPositions(_vertexLookup, collisionObjects, 0.01);
+        base.Update(collisionObjects, 0.01);
+        
     }
 }

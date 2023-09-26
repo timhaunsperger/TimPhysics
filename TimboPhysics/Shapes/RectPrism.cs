@@ -40,7 +40,7 @@ public class RectPrism : Shape
             var scaledPos =  rotation * new Quaterniond(
                 _baseVertices[i][0] * width, _baseVertices[i][1] * height, _baseVertices[i][2] * depth, 0) * Quaterniond.Conjugate(rotation);
             
-            outVertices[i] = new Vector3d(scaledPos.Xyz);
+            outVertices[i] = new Vector3d(scaledPos.Xyz+offset);
         }
         
         Indices = _baseIndices;

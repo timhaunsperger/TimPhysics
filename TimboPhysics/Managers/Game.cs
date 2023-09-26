@@ -48,16 +48,15 @@ public class Game : GameWindow
                 300, 
                 Quaterniond.FromEulerAngles(0, 0, 0)), 
             _shader);
-        //_renderObjects.Add(floor);
-        //_physicsObjects.Add(floor);
+        _physicsObjects.Add(floor);
         
         
-        for (int i = 0; i < 0; i++)
+        for (int i = 0; i < 6; i++) // Add Platforms
         {
             _physicsObjects.Add(new Staticbody(
                 new RectPrism(
-                    new Vector3d(i%2*13-5,10*i-10,0),
-                    13, 
+                    new Vector3d(i%2*10-5,i*5-10,0),
+                    10, 
                     0.5, 
                     5, 
                     Quaterniond.FromEulerAngles(45*i%2>0?1:-1, 0, 0)), 
@@ -65,11 +64,17 @@ public class Game : GameWindow
         }
 
         var rand = new Random();
-        for (int i = 0; i < 600; i++)
+        for (int i = 0; i < 400; i++) // Add Particles
         {
-            //_physicsParticles.Add(new PhysicsParticle(new Vector3d(rand.NextDouble()*5 * (i%1-0.5), 2+i/5 , rand.NextDouble()*5 * (i%1-0.5)), 0.3, _shader));
             var pm = i % 2 == 1 ? 1 : -1;
-            _physicsParticles.Add(new PhysicsParticle(pm,new Vector3d(rand.NextDouble()-0.5, rand.NextDouble()-0.5, rand.NextDouble()-0.5), 0.05, _shader));
+            _physicsParticles.Add(new PhysicsParticle(pm,new Vector3d(
+                (rand.NextDouble()-0.5)*7+20, 
+                (rand.NextDouble()+0.5)*7, 
+                (rand.NextDouble()-0.5)*7), (i % 2 + 1) * 0.2, _shader));
+        }
+        for (int i = 0; i < 30; i++) // Add Softbodies
+        {
+            _physicsObjects.Add(new Softbody(SphereCache.GetSphere(2, new Vector3d(i%4, i*2+10, 0), 0.7), _shader, true));
         }
         
         base.OnLoad();
@@ -137,7 +142,7 @@ public class Game : GameWindow
         for (int i = 0; i < _physicsParticles.Count; i++)
         {
             var taskNum = i;
-            //physicsParticleUpdateTasks[taskNum] = Task.Factory.StartNew(() => _physicsParticles[taskNum].Update(_physicsParticles, args.Time));
+            physicsParticleUpdateTasks[taskNum] = Task.Factory.StartNew(() => _physicsParticles[taskNum].Update(_physicsParticles, args.Time));
             _physicsParticles[taskNum].Update(_physicsParticles, args.Time);
         }
         Collision.ResolveCollision(_physicsParticles);
