@@ -13,30 +13,29 @@ public class Softbody : PhysicsObject
         IsCenterStatic = false;
     }
 
-    private Dictionary<uint,PhysicsVertex> NextPositions(
-        Dictionary<uint,PhysicsVertex> Vertices, List<PhysicsObject> collisionObjects, double timeStep)
+    private Dictionary<uint,PhysicsVertex> NextPositions(Dictionary<uint,PhysicsVertex> Vertices, double timeStep)
     {
         // Clone input dictionary because dict is reference type
         Vertices = new Dictionary<uint, PhysicsVertex>(Vertices);
 
         // Find volume of object by sum of volume of tetrahedrons of faces and centerPos
         var volume = 0d;
-        for (int i = 0; i < _faces.Length; i++)
+        for (int i = 0; i < Faces.Length; i++)
         {
             volume += TMathUtils.GetVolume(
-                Vertices[_faces[i][0]].Position,
-                Vertices[_faces[i][1]].Position,
-                Vertices[_faces[i][2]].Position,
+                Vertices[Faces[i][0]].Position,
+                Vertices[Faces[i][1]].Position,
+                Vertices[Faces[i][2]].Position,
                 Center);
         }
 
-        const double springConst = 1000;
+        const double springConst = 2000;
         const double springOffset = 0.1;
-        const double dampingFactor = 0.5;
-        const double pressure = 3000;
+        const double dampingFactor = 2;
+        const double pressure = 5000;
         const double gravity = 1;
 
-        foreach (var face in _faces)
+        foreach (var face in Faces)
         {
             PhysicsVertex[] faceVertices = {Vertices[face[0]], Vertices[face[1]], Vertices[face[2]]};
 
@@ -75,24 +74,13 @@ public class Softbody : PhysicsObject
             Vertices[face[1]] = faceVertices[1];
             Vertices[face[2]] = faceVertices[2];
         }
-        
-        //Collision
-        foreach (var collisionObject in collisionObjects)
-        {
-            if (collisionObject != this && (collisionObject.Center-Center).Length < collisionObject.Radius + Radius)
-            {
-                Collision(collisionObject, Vertices);
-            }
-        }
-
         UpdateValues(Vertices, timeStep);
         
         return Vertices;
     }
-    public override void Update(List<PhysicsObject> collisionObjects, double deltaTime)
+    public override void Update(double deltaTime)
     {
-        _vertexLookup = NextPositions(_vertexLookup, collisionObjects, 0.01);
-        base.Update(collisionObjects, 0.01);
-        
+        _vertexLookup = NextPositions(_vertexLookup, 0.01);
+        base.Update(0.01);
     }
 }
