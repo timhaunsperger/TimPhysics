@@ -7,16 +7,20 @@ public class PhysicsParticle : PhysicsObject
 {
     public Vector3d Position;
     public Vector3d Speed;
+    public double Mass;
     private Vector3d[] _vertexOffsets;
+    private bool _gravity;
+    
 
-    public PhysicsParticle(int seed, Vector3d position, double size, Shader shader) 
-        : base(SphereCache.GetSphere(1, position, size), shader)
+    public PhysicsParticle(Vector3d position, double size, Shader shader, Vector3d speed, bool gravity) 
+        : base(SphereCache.GetSphere(2, position, size), shader, size)
     {
         var rand = new Random();
         Position = position;
         Radius = size;
-        Speed = new Vector3d(rand.NextDouble() * seed * 4, rand.NextDouble() * seed * 4, rand.NextDouble() * seed * 4);
-        IsCenterStatic = true;
+        Mass = size;
+        Speed = speed;
+        _gravity = gravity;
         
         _vertexOffsets = new Vector3d[_vertices.Length];
         for (int i = 0; i < _vertices.Length; i++)
@@ -28,15 +32,18 @@ public class PhysicsParticle : PhysicsObject
     private void NextPositions(double deltaTime)
     {
         //attraction
-        var attrCenter = Position - Vector3d.UnitY - (Vector3d.UnitX * 20);
-        
-        var gravity = new Vector3d(0, -0.5, 0);
-        Speed += gravity;
-        Speed *= Math.Pow(0.99, Speed.Length);
-        if (attrCenter.Length > 8 && Vector3d.Dot(attrCenter, Speed) > 0)
+        // var attrCenter = Position - Vector3d.UnitY - (Vector3d.UnitX * 20);
+        //
+        if (_gravity)
         {
-            Speed -= 2 * Vector3d.Dot(Speed, -attrCenter.Normalized()) * -attrCenter.Normalized();
+            var gravity = new Vector3d(0, -0.2, 0);
+            Speed += gravity;
         }
+        
+        // if (attrCenter.Length > 2 && Vector3d.Dot(attrCenter, Speed) > 0)
+        // {
+        //     Speed += 2 * Vector3d.Dot(Speed, -attrCenter.Normalized()) * attrCenter.Normalized();
+        // }
         Position += Speed * deltaTime;
     }
 

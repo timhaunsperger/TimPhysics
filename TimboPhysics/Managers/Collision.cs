@@ -13,9 +13,8 @@ public static class Collision
             for (int j = i+1; j < objects.Count; j++)
             {
                 var obj2 = objects[j];
-                var distance = (obj1.Position - obj2.Position).Length - (obj1.Radius + obj1.Radius);
-                
-                if (distance >= 0) // Prevents unnecessary collision tests
+                var distance = (obj1.Position - obj2.Position).Length - (obj1.Radius + obj2.Radius);
+                if (distance >= 0) // Check if colliding
                 { 
                     continue;
                 }
@@ -27,20 +26,26 @@ public static class Collision
                 
                 //Elastic collision speed restitution
                 var dotP = Vector3d.Dot(obj1.Speed.Normalized(), obj2.Speed.Normalized());
-                if (dotP < 0)
-                {
-                    continue; 
-                }
-                var relSpeed = dotP * (obj1.Speed - obj2.Speed).Length;
-                obj1.Speed += relSpeed * collisionVector;
-                obj2.Speed -= relSpeed * collisionVector;
+                
+                var massSum = obj1.Mass + obj2.Mass;
+                //var comVTransform = (obj1.Mass*obj1.Speed + obj2.Mass*obj2.Speed)/massSum;
+                var vTransform = obj2.Speed;
+                
+                obj1.Speed -= vTransform;
+                obj2.Speed -= vTransform;
+                var colAxisVel = Vector3d.Dot(obj1.Speed, collisionVector) * collisionVector;
+                var perpendicularVel = obj1.Speed - colAxisVel;
+                obj1.Speed = (obj1.Mass - obj2.Mass) / massSum * colAxisVel + perpendicularVel;
+                obj2.Speed = 2 * obj1.Mass / massSum * colAxisVel;
+                obj1.Speed += vTransform;
+                obj2.Speed += vTransform;
             }
         }
     }
-    public static void SoftbodyCollisionResolver(PhysicsObject collider1, PhysicsObject collider2)
+    public static void SoftBodyCollisionResolver(PhysicsObject collider1, PhysicsObject collider2)
     {
         // collider1 cannot be static
-        if (collider1.GetType() == typeof(Staticbody)) 
+        if (collider1.GetType() == typeof(StaticBody)) 
         {
             return;
         }
@@ -89,7 +94,7 @@ public static class Collision
                 Vector3d collisionVector;
                 
                 // non-static object collision
-                if (collider2.GetType() != typeof(Staticbody))
+                if (collider2.GetType() != typeof(StaticBody))
                 {
                     if (dist < collider1.Radius)
                     {
@@ -109,11 +114,13 @@ public static class Collision
                         faceVelocity += collider2._vertexLookup[closestFace[i]].Speed / 3;
                     }
                     var relVelocity = collidingVertex.Speed - faceVelocity;
+
+                    var netMass = collidingVertex.Mass + collider2._vertexLookup[closestFace[0]].Mass;
                     
                     // adds rel velocity and resolves pos
                     if (Vector3d.Dot(relVelocity,collisionVector) < 0)
                     {
-                        collidingVertex.Speed -= relVelocity / 2;
+                        collidingVertex.Speed -= relVelocity / 4;
                         collidingVertex.Position += collisionVector * closestFaceDist / 4;
                         collidingVertex.Speed *= 0.94; // friction
                     
@@ -121,8 +128,8 @@ public static class Collision
                         for (int i = 0; i < 3; i++)
                         {
                             var faceVertex = collider2._vertexLookup[closestFace[i]];
-                            faceVertex.Position += collisionVector * closestFaceDist / 12;
-                            faceVertex.Speed += relVelocity / 6;
+                            faceVertex.Position += collisionVector * closestFaceDist / 5;
+                            faceVertex.Speed += relVelocity / 5;
 
                             faceVertex.Speed *= 0.98; // friction
                             collider2._vertexLookup[closestFace[i]] = faceVertex;
@@ -145,6 +152,7 @@ public static class Collision
                     if (Vector3d.Dot(collidingVertex.Speed, collisionVector) < 0)
                     {
                         collidingVertex.Speed -= 2 * Vector3d.Dot(collidingVertex.Speed, collisionVector) * collisionVector;
+                        collidingVertex.Speed *= 0.94; // friction
                     }
                 }
                 
@@ -154,7 +162,7 @@ public static class Collision
         }
     }
     
-    public static void ResolveSoftbodyCollision(List<PhysicsObject> collisionObjects)
+    public static void ResolveSoftBodyCollision(List<PhysicsObject> collisionObjects)
     {
         // Loop through all objects, looking for colliding pairs
         var collisionPairs = new List<PhysicsObject[]>();
@@ -173,8 +181,8 @@ public static class Collision
         }
         foreach (var collisionPair in collisionPairs)
         {
-            SoftbodyCollisionResolver(collisionPair[0], collisionPair[1]);
-            SoftbodyCollisionResolver(collisionPair[1], collisionPair[0]);
+            SoftBodyCollisionResolver(collisionPair[0], collisionPair[1]);
+            SoftBodyCollisionResolver(collisionPair[1], collisionPair[0]);
         }
     }
 }

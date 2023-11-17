@@ -4,6 +4,7 @@ using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using TimboPhysics.Presets;
 
 namespace TimboPhysics;
 
@@ -38,60 +39,18 @@ public class Game : GameWindow
         GL.Enable(EnableCap.DepthTest);
         GL.ClearColor(new Color4(0.2f,0.2f,1f,1f));
         
+        // Load lighting shader
         _shader = new Shader("Shaders/lighting.vert", "Shaders/lighting.frag");
         
-        var floor = new Staticbody(
-            new RectPrism(
-                new Vector3d(0,-15,0), 
-                300, 
-                0.5, 
-                300, 
-                Quaterniond.FromEulerAngles(0, 0, 0)), 
-            _shader);
-        _physicsObjects.Add(floor);
-        
-        
-        for (int i = 0; i < 6; i++) // Add Platforms
-        {
-            _physicsObjects.Add(new Staticbody(
-                new RectPrism(
-                    new Vector3d(i%2*10-5,i*5-10,0),
-                    10, 
-                    0.5, 
-                    5, 
-                    Quaterniond.FromEulerAngles(45*i%2>0?1:-1, 0, 0)), 
-                _shader));
-        }
-
-        var rand = new Random();
-        for (int i = 0; i < 40; i++) // Add Particles
-        {
-            var pm = i % 2 == 1 ? 1 : -1;
-            _physicsParticles.Add(new PhysicsParticle(pm,new Vector3d(
-                (rand.NextDouble()-0.5)*7+20, 
-                (rand.NextDouble()+0.5)*7, 
-                (rand.NextDouble()-0.5)*7), (i % 2 + 1) * 0.2, _shader));
-        }
-        for (int i = 0; i < 20; i++) // Add Softbodies
-        {
-            _physicsObjects.Add(new Softbody(SphereCache.GetSphere(2, new Vector3d(i%4, i*2+10, 0), 0.78), _shader, true));
-        }
-        // Add more softbodies for collision demo
-        _physicsObjects.Add(new Softbody(SphereCache.GetSphere(2, new Vector3d(5, 5, 7), 0.78), _shader, false));
-        _physicsObjects.Add(new Softbody(SphereCache.GetSphere(2, new Vector3d(-5, 5, 7), 0.78), _shader, false));
-        var last = _physicsObjects.Count;
-        foreach (var vertex in _physicsObjects[last-1]._vertexLookup)
-        {
-            var physVertex = _physicsObjects[last-1]._vertexLookup[vertex.Key];
-            physVertex.Speed += new Vector3d(3,0,0);
-            _physicsObjects[last-1]._vertexLookup[vertex.Key] = physVertex;
-        }
+        // Load world layout
+        Layouts.SoftBodyTest1(_physicsObjects, _physicsParticles, _shader);
         
         base.OnLoad();
     }
 
     protected override void OnUnload()
     {
+        // Cleanup on close
         GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
         _shader.Dispose();
         base.OnUnload();
@@ -100,6 +59,7 @@ public class Game : GameWindow
 
     protected override void OnResize(ResizeEventArgs e)
     {
+        // Adjust camera on window resize
         GL.Viewport(0, 0, e.Width, e.Height);
         _camera.AspectRatio = e.Width / (float)e.Height;
         base.OnResize(e);
@@ -134,7 +94,7 @@ public class Game : GameWindow
         
         for (int i = 0; i < _physicsObjects.Count; i++)
         {
-            if (input.IsKeyDown(Keys.U)) // lift softbodies if u pressed
+            if (input.IsKeyDown(Keys.U)) // Lift SoftBodies if "u" pressed
             {
                 for (uint j = 0; j < _physicsObjects[i]._vertexLookup.Count; j++)
                 {
@@ -143,15 +103,19 @@ public class Game : GameWindow
                     _physicsObjects[i]._vertexLookup[j] = vertex;
                 }
             }
+            // Update all physics objects
             _physicsObjects[i].Update(args.Time);
         }
+        
+        // Update all physics particles
         for (int i = 0; i < _physicsParticles.Count; i++)
         {
             var taskNum = i;
             _physicsParticles[taskNum].Update(_physicsParticles, args.Time);
         }
+        // Resolve Object Collisions
         Collision.ResolveParticleCollision(_physicsParticles);
-        Collision.ResolveSoftbodyCollision(_physicsObjects);
+        Collision.ResolveSoftBodyCollision(_physicsObjects);
         base.OnUpdateFrame(args);
     }
     protected override void OnRenderFrame(FrameEventArgs args)

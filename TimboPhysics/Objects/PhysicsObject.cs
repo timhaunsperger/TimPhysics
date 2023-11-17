@@ -6,24 +6,23 @@ namespace TimboPhysics;
 
 public class PhysicsObject : RenderObject
 { 
-    // Helper fields for Collision.cs
-    public List<int> CollidedObjects; 
+    // Helper field for Collision.cs
     public double Radius;
-    
     public Vector3d Center;
-    protected bool IsCenterStatic;
     
     public Dictionary<uint, PhysicsVertex> _vertexLookup;
     public uint[][] Faces;  // Array of arrays storing which vertices are connected to form faces
 
     //Stores data for state of each vertex
-    public struct PhysicsVertex(Vector3d position, Vector3d speed)
+    public struct PhysicsVertex(Vector3d position, Vector3d speed, double mass)
     {
         public Vector3d Position = position;
         public Vector3d Speed = speed;
+        public double Mass = mass;
+        
     }
 
-    protected PhysicsObject(Shape shape, Shader shader)
+    protected PhysicsObject(Shape shape, Shader shader, double mass)
         : base(shape, shader)
     {
         var indices = shape.Indices;
@@ -35,7 +34,7 @@ public class PhysicsObject : RenderObject
             if (true)
             {
                 var vertexPos = new Vector3d(_vertices[indices[i]][0], _vertices[indices[i]][1], _vertices[indices[i]][2]);
-                _vertexLookup[indices[i]] = new PhysicsVertex(vertexPos, Vector3d.Zero);
+                _vertexLookup[indices[i]] = new PhysicsVertex(vertexPos, Vector3d.Zero, mass/indices.Length);
                 Center += vertexPos;
             }
 

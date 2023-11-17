@@ -60,20 +60,22 @@ public class Icosphere : Shape
             9,2,5,
             7,2,11
         };
-        _baseVertices =  new [] {
-            new []{-X,N,Z}, 
-            new []{X,N,Z}, 
-            new []{-X,N,-Z}, 
-            new []{X,N,-Z},
-            new []{N,Z,X}, 
-            new []{N,Z,-X}, 
-            new []{N,-Z,X}, 
-            new []{N,-Z,-X}, 
-            new []{Z,X,N}, 
-            new []{-Z,X, N}, 
-            new []{Z,-X,N}, 
-            new []{-Z,-X, N}
+        _baseVertices = new[]
+        {
+            new[] { -X, N, Z },
+            new[] { X, N, Z },
+            new[] { -X, N, -Z },
+            new[] { X, N, -Z },
+            new[] { N, Z, X },
+            new[] { N, Z, -X },
+            new[] { N, -Z, X },
+            new[] { N, -Z, -X },
+            new[] { Z, X, N },
+            new[] { -Z, X, N },
+            new[] { Z, -X, N },
+            new[] { -Z, -X, N }
         };
+
         // Creates faces out of each set of three indices
         for (int i = 0; i < _baseIndices.Length; i+=3)
         {

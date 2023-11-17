@@ -2,15 +2,14 @@
 
 namespace TimboPhysics;
 
-public class Softbody : PhysicsObject
+public class SoftBody : PhysicsObject
 {
     private bool _gravity;
 
-    public Softbody(Shape shape, Shader shader, bool gravity) 
-        : base(shape, shader)
+    public SoftBody(Shape shape, Shader shader, float mass, bool gravity) 
+        : base(shape, shader, mass)
     {
         _gravity = gravity;
-        IsCenterStatic = false;
     }
 
     private Dictionary<uint,PhysicsVertex> NextPositions(Dictionary<uint,PhysicsVertex> Vertices, double timeStep)
@@ -30,9 +29,9 @@ public class Softbody : PhysicsObject
         }
 
         const double springConst = 2000;
-        const double springOffset = 0.1;
+        const double springOffset = 0.2;
         const double dampingFactor = 2;
-        const double pressure = 5000;
+        const double pressure = 2000;
         const double gravity = 1;
 
         foreach (var face in Faces)
