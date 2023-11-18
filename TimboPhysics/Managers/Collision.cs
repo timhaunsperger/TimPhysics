@@ -7,36 +7,42 @@ public static class Collision
 {
     public static void ResolveParticleCollision(List<PhysicsParticle> objects)
     {
+
+        
         for (int i = 0; i < objects.Count; i++)
         {
             var obj1 = objects[i];
             for (int j = i+1; j < objects.Count; j++)
             {
                 var obj2 = objects[j];
-                var distance = (obj1.Position - obj2.Position).Length - (obj1.Radius + obj2.Radius);
-                if (distance >= 0) // Check if colliding
-                { 
-                    continue;
-                }
                 
-                var collisionVector = (obj1.Position - obj2.Position).Normalized();
-                //Collision position restitution
-                obj1.Position -= collisionVector * distance / 2;
-                obj2.Position += collisionVector * distance / 2;
+                var distVec = obj1.Position - obj2.Position;
+                var dist = distVec.Length;
+                var sep = dist - (obj1.Radius + obj2.Radius);
+
+                if (sep > 0) { continue; } // Check if colliding
+                
+                var collisionVector = (obj1.Position - obj2.Position) / dist;
+                var massSum = obj1.Mass + obj2.Mass;
+                obj1.Position -= collisionVector * sep * obj2.Mass / massSum;
+                obj2.Position += collisionVector * sep * obj1.Mass / massSum;
+                
+                if(obj1.Speed == Vector3d.Zero && obj2.Speed == Vector3d.Zero){ continue; }
+                // transform velocities so one object stationary
+                var vTransform = obj2.Speed; 
+                obj1.Speed -= vTransform;
+                obj2.Speed = Vector3d.Zero;
                 
                 //Elastic collision speed restitution
-                var dotP = Vector3d.Dot(obj1.Speed.Normalized(), obj2.Speed.Normalized());
-                
-                var massSum = obj1.Mass + obj2.Mass;
-                //var comVTransform = (obj1.Mass*obj1.Speed + obj2.Mass*obj2.Speed)/massSum;
-                var vTransform = obj2.Speed;
-                
-                obj1.Speed -= vTransform;
-                obj2.Speed -= vTransform;
-                var colAxisVel = Vector3d.Dot(obj1.Speed, collisionVector) * collisionVector;
-                var perpendicularVel = obj1.Speed - colAxisVel;
-                obj1.Speed = (obj1.Mass - obj2.Mass) / massSum * colAxisVel + perpendicularVel;
-                obj2.Speed = 2 * obj1.Mass / massSum * colAxisVel;
+                var colAxisVel = Vector3d.Dot(obj1.Speed, collisionVector) * collisionVector; // find velocity along axis of collision
+                var perpendicularVel = obj1.Speed - colAxisVel; // find residual of projection of velocity onto collision axis
+                if (Vector3d.Dot(obj1.Speed, colAxisVel) > 0)
+                {
+                    // Solve velocities as linear elastic collision, then add transforms 
+                    obj1.Speed = (obj1.Mass - obj2.Mass) / massSum * colAxisVel + perpendicularVel;
+                    obj2.Speed = 2 * obj1.Mass / massSum * colAxisVel;
+                }
+                // reverse transform
                 obj1.Speed += vTransform;
                 obj2.Speed += vTransform;
             }
@@ -98,7 +104,7 @@ public static class Collision
                 {
                     if (dist < collider1.Radius)
                     {
-                        collisionVector = (collider1.Center - collider2.Center).Normalized(); // prevent overlapping spheres
+                        collisionVector = (collider1.Center - collider2.Center).Normalized(); // prevent merging spheres
                     }
                     else
                     {
@@ -120,18 +126,17 @@ public static class Collision
                     // adds rel velocity and resolves pos
                     if (Vector3d.Dot(relVelocity,collisionVector) < 0)
                     {
-                        collidingVertex.Speed -= relVelocity / 4;
-                        collidingVertex.Position += collisionVector * closestFaceDist / 4;
-                        collidingVertex.Speed *= 0.94; // friction
+                        collidingVertex.Speed -= relVelocity * collidingVertex.Mass / netMass / 2;
+                        collidingVertex.Position += collisionVector * closestFaceDist  * collidingVertex.Mass / netMass / 4;
                     
                         // apply collision to collided face
                         for (int i = 0; i < 3; i++)
                         {
                             var faceVertex = collider2._vertexLookup[closestFace[i]];
-                            faceVertex.Position += collisionVector * closestFaceDist / 5;
-                            faceVertex.Speed += relVelocity / 5;
-
-                            faceVertex.Speed *= 0.98; // friction
+                            
+                            faceVertex.Speed += relVelocity  * faceVertex.Mass / netMass / 3;
+                            faceVertex.Position += collisionVector * closestFaceDist * faceVertex.Mass / netMass / 6;
+                            
                             collider2._vertexLookup[closestFace[i]] = faceVertex;
                         }
                     }
@@ -152,7 +157,7 @@ public static class Collision
                     if (Vector3d.Dot(collidingVertex.Speed, collisionVector) < 0)
                     {
                         collidingVertex.Speed -= 2 * Vector3d.Dot(collidingVertex.Speed, collisionVector) * collisionVector;
-                        collidingVertex.Speed *= 0.94; // friction
+                        collidingVertex.Speed *= 0.98; // friction
                     }
                 }
                 

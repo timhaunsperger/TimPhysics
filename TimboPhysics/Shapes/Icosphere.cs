@@ -24,7 +24,7 @@ public class Icosphere : Shape
         }
     }
 
-    public Icosphere(Icosphere sphere) //Cloning Constructor
+    public Icosphere(Icosphere sphere)//Cloning Constructor
     {
         Vertices = new double[sphere.Vertices.Length][];
         for (int i = 0; i < sphere.Vertices.Length; i++)
@@ -33,7 +33,7 @@ public class Icosphere : Shape
         }
         Indices = (uint[])sphere.Indices.Clone();
         _indexLookup = new Dictionary<Vector3d, uint>(sphere._indexLookup);
-        _faces = (Face[])sphere._faces.Clone();
+        _faces = sphere._faces;
     }
     
     public Icosphere(int recursion)

@@ -35,4 +35,14 @@ public static class TMathUtils
         var normal = GetNormal(p0, p1, p2);
         return Vector3d.Dot((p0 - point), normal);
     }
+    
+    public static double[] Flatten(double[][] inp)
+    {
+        var outp = new double[inp.Length * 8];
+        for (int i = 0; i < inp.Length; i++)
+        {
+            Array.Copy(inp[i], 0, outp, i * 8, 8);
+        }
+        return outp;
+    }
 }

@@ -7,7 +7,8 @@ public class Shape
     protected double[][] _baseVertices;
     protected uint[] _baseIndices;
     public double[][] Vertices;
-    public uint[] Indices; 
+    public uint[] Indices;
+    
     
     private static Vector2d GetSphereCoord(Vector3d i) // Approximates texture vertex data based on sphere coords
     {

@@ -12,75 +12,78 @@ public class PhysicsParticle : PhysicsObject
     private bool _gravity;
     
 
-    public PhysicsParticle(Vector3d position, double size, Shader shader, Vector3d speed, bool gravity) 
-        : base(SphereCache.GetSphere(2, position, size), shader, size)
+    public PhysicsParticle(Vector3d position, double size, int recursion, Shader shader, Vector3d speed, bool gravity) 
+        : base(SphereCache.GetSphere(recursion, position, size), shader, size)
     {
-        var rand = new Random();
         Position = position;
         Radius = size;
-        Mass = size;
+        Mass = Math.Pow(size,3);
         Speed = speed;
         _gravity = gravity;
         
-        _vertexOffsets = new Vector3d[_vertices.Length];
-        for (int i = 0; i < _vertices.Length; i++)
+        _vertexOffsets = new Vector3d[Vertices.Length];
+        for (int i = 0; i < Vertices.Length; i++)
         {
-            _vertexOffsets[i] = new Vector3d (_vertices[i][0], _vertices[i][1], _vertices[i][2] ) - position;
+            _vertexOffsets[i] = new Vector3d (Vertices[i][0], Vertices[i][1], Vertices[i][2] ) - position;
+            _flattenedVertices[8*i+3] = _vertexOffsets[i].X;
+            _flattenedVertices[8*i+4] = _vertexOffsets[i].Y;
+            _flattenedVertices[8*i+5] = _vertexOffsets[i].Z;
         }
     }
 
     private void NextPositions(double deltaTime)
     {
-        //attraction
-        // var attrCenter = Position - Vector3d.UnitY - (Vector3d.UnitX * 20);
-        //
+        
         if (_gravity)
         {
-            var gravity = new Vector3d(0, -0.2, 0);
+            // contain particles
+            var boxCenter = Vector3d.UnitY * 5 - Vector3d.UnitX * 20;
+            var ctrDist = Position - boxCenter;
+            var boxDims = new Vector3d( 5, 5, 5 );
+            var OOBchecks = new[] { Math.Abs(ctrDist.X) > boxDims.X, Math.Abs(ctrDist.Y) > boxDims.Y, Math.Abs(ctrDist.Z) > boxDims.Z,};
+            
+            
+            Speed.X -= 2 * Speed.X * Convert.ToInt16(OOBchecks[0]);
+            Speed.Y -= 2 * Speed.Y * Convert.ToInt16(OOBchecks[1]);
+            Speed.Z -= 2 * Speed.Z * Convert.ToInt16(OOBchecks[2]);
+            
+            var gravity = new Vector3d(0, -0.1, 0);
             Speed += gravity;
+            
+        }
+
+        if (Speed.Y < 0 && Position.Y - Radius < -15)
+        {
+            Speed.Y -= 2 * Speed.Y;
         }
         
-        // if (attrCenter.Length > 2 && Vector3d.Dot(attrCenter, Speed) > 0)
-        // {
-        //     Speed += 2 * Vector3d.Dot(Speed, -attrCenter.Normalized()) * attrCenter.Normalized();
-        // }
+        
         Position += Speed * deltaTime;
     }
 
     
-    //Allows for update method visibility when class extensions are saved to PhysicsObject list
-    public virtual void Update(List<PhysicsParticle> collisionObjects, double deltaTime)
+    public virtual void Update(double deltaTime)
     {
         NextPositions(deltaTime);
         // updates position
         Center = Position;
 
         // Updates values in vertex array
-        for (uint i = 0; i < _vertices.Length; i++)
+        for (uint i = 0; i < Vertices.Length; i++)
         {
-            _vertices[i] = new[] {
-                Position.X + _vertexOffsets[i].X,
-                Position.Y + _vertexOffsets[i].Y, 
-                Position.Z + _vertexOffsets[i].Z, 
-                _vertexOffsets[i].X, _vertexOffsets[i].Y, _vertexOffsets[i].Z, _vertices[i][6], _vertices[i][7]};  // Lighting normal of vertex is same as offset
-        }
-
-        for (int i = 0; i < _vertices.Length; i++)
-        {
-            for (int j = 0; j < 8; j++)
-            {
-                _flattenedVertices[i * 8 + j] = _vertices[i][j];
-            }
+            _flattenedVertices[8*i+0] = Position.X + _vertexOffsets[i].X;
+            _flattenedVertices[8*i+1] = Position.Y + _vertexOffsets[i].Y;
+            _flattenedVertices[8*i+2] = Position.Z + _vertexOffsets[i].Z;
         }
     }
-
-    //sets OpenGl buffer data to flattened vertex array
-    public override void Render(Matrix4 view, Matrix4 projection, Vector3 viewPos)
+    
+    public void Assign(double[] position)
     {
-        GL.BindVertexArray(_VAO);
-        GL.BindBuffer(BufferTarget.ArrayBuffer, _VBO);
-        GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, _flattenedVertices.Length * sizeof(double), _flattenedVertices);
-        base.Render(view, projection, viewPos);
-        
+        for (uint i = 0; i < Vertices.Length; i++)
+        {
+            _flattenedVertices[i * 8] = position[0] + _vertexOffsets[i].X;
+            _flattenedVertices[i * 8 + 1] = position[1] + _vertexOffsets[i].Y;
+            _flattenedVertices[i * 8 + 2] = position[2] + _vertexOffsets[i].Z;
+        }
     }
 }

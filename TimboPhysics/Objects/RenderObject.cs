@@ -6,8 +6,8 @@ namespace TimboPhysics;
 public class RenderObject
 {
     private readonly Shader _shader;
-    protected double[][] _vertices;
-    protected double[] _flattenedVertices;
+    public double[][] Vertices;
+    public double[] _flattenedVertices;
     private readonly uint[] _indices;
     protected int _VAO;
     protected int _VBO;
@@ -17,8 +17,10 @@ public class RenderObject
 
     public RenderObject(Shape shape, Shader shader)
     {
-        _vertices = shape.Vertices;
-        _flattenedVertices = shape.Vertices.SelectMany(x => x).ToArray();
+        Vertices = shape.Vertices;
+        _flattenedVertices = TMathUtils.Flatten(Vertices);
+        
+        
         _indices = shape.Indices;
         _shader = shader;
         
@@ -51,12 +53,22 @@ public class RenderObject
         _shader.SetInt("texture0", 0);
         _shader.SetInt("texture1", 1);
     }
+
+    // public RenderObject(RenderObject obj, Shader shader)
+    // { 
+    //     _shader = shader;
+    //
+    //     _vertices = new List<double[]>(obj._vertices).ToArray();
+    //     _flattenedVertices = _vertices.SelectMany(x => x).ToArray();
+    //     _indices = new List<uint>(obj._indices).ToArray();
+    // }
     
     public virtual void Render(Matrix4 view, Matrix4 projection, Vector3 viewPos)
     {
         GL.BindVertexArray(_VAO);
         
         GL.BindBuffer(BufferTarget.ArrayBuffer, _VBO);
+        GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, _flattenedVertices.Length * sizeof(double), _flattenedVertices);
         
         _shader.SetMatrix4("view", view);
         _shader.SetMatrix4("projection", projection);

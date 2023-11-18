@@ -14,12 +14,12 @@ public class PhysicsObject : RenderObject
     public uint[][] Faces;  // Array of arrays storing which vertices are connected to form faces
 
     //Stores data for state of each vertex
-    public struct PhysicsVertex(Vector3d position, Vector3d speed, double mass)
+    public struct PhysicsVertex(Vector3d position, Vector3d speed, double mass, PhysicsObject parent)
     {
         public Vector3d Position = position;
         public Vector3d Speed = speed;
         public double Mass = mass;
-        
+        public PhysicsObject Parent = parent;
     }
 
     protected PhysicsObject(Shape shape, Shader shader, double mass)
@@ -33,8 +33,8 @@ public class PhysicsObject : RenderObject
         {
             if (true)
             {
-                var vertexPos = new Vector3d(_vertices[indices[i]][0], _vertices[indices[i]][1], _vertices[indices[i]][2]);
-                _vertexLookup[indices[i]] = new PhysicsVertex(vertexPos, Vector3d.Zero, mass/indices.Length);
+                var vertexPos = new Vector3d(Vertices[indices[i]][0], Vertices[indices[i]][1], Vertices[indices[i]][2]);
+                _vertexLookup[indices[i]] = new PhysicsVertex(vertexPos, Vector3d.Zero, mass/indices.Length, this);
                 Center += vertexPos;
             }
 
@@ -73,31 +73,27 @@ public class PhysicsObject : RenderObject
     }
     
     //Updates vertex array with new positions and normals from physics vertices then flattens for use in OpenGL
-    private void UpdateVertices()
+    public virtual void Update(double deltaTime)
     {
         for (uint i = 0; i < _vertexLookup.Count; i++)
         {
             var newPos = _vertexLookup[i].Position;
             // Vertex can not have an actual normal, but center to vertex vector is close enough approximation
             var fakeNormal = (newPos - Center).Normalized(); 
-            _vertices[i] = new[] {newPos.X, newPos.Y, newPos.Z, fakeNormal.X, fakeNormal.Y, fakeNormal.Z, _vertices[i][6], _vertices[i][7]};
+            Vertices[i] = new[] {newPos.X, newPos.Y, newPos.Z, fakeNormal.X, fakeNormal.Y, fakeNormal.Z, Vertices[i][6], Vertices[i][7]};
         }
-        _flattenedVertices = _vertices.SelectMany(x => x).ToArray();
+        _flattenedVertices = Vertices.SelectMany(x => x).ToArray();
     }
     
-    //Allows for update method visibility when class extensions are saved to PhysicsObject list
-    public virtual void Update(double deltaTime)
+    public void Assign(double[][] vertices)
     {
-        UpdateVertices();
-    }
-
-    //sets OpenGl buffer data to flattened vertex array
-    public override void Render(Matrix4 view, Matrix4 projection, Vector3 viewPos)
-    {
-        GL.BindVertexArray(_VAO);
-        GL.BindBuffer(BufferTarget.ArrayBuffer, _VBO);
-        GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, _flattenedVertices.Length * sizeof(double), _flattenedVertices);
-        base.Render(view, projection, viewPos);
-        
+        for (uint i = 0; i < vertices.Length; i++)
+        {
+            var newPos = new Vector3d(vertices[i][0], vertices[i][1], vertices[i][2]);
+            // Vertex can not have an actual normal, but center to vertex vector is close enough approximation
+            var fakeNormal = (newPos - Center).Normalized(); 
+            Vertices[i] = new[] {vertices[i][0], vertices[i][1], vertices[i][2], fakeNormal.X, fakeNormal.Y, fakeNormal.Z, Vertices[i][6], Vertices[i][7]};
+        }
+        _flattenedVertices = Vertices.SelectMany(x => x).ToArray();
     }
 }

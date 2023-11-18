@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Security.Cryptography.X509Certificates;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
@@ -10,13 +11,15 @@ namespace TimboPhysics;
 
 public class Game : GameWindow
 {
-    private List<RenderObject> _renderObjects = new ();
-    private List<PhysicsObject> _physicsObjects = new ();
-    private List<PhysicsParticle> _physicsParticles = new ();
-    public List<RenderObject> _collisionObjects = new();
+    private volatile List<RenderObject> _renderObjects = new ();
+    private volatile List<PhysicsObject> _physicsObjects = new ();
+    private volatile List<PhysicsParticle> _physicsParticles = new ();
     private Shader _shader;
     private float _AspectRatio = 1;
     private Camera _camera;
+    private List<Tuple<List<double[][]>, List<double[]>>> _frames = new ();
+    private int _frameCounter = 0;
+    private bool _recording = true;
 
     public Game(GameWindowSettings gameSettings, NativeWindowSettings nativeSettings) 
         : base(gameSettings, nativeSettings)
@@ -26,10 +29,8 @@ public class Game : GameWindow
         CursorGrabbed = true;
     }
 
-    private void AddObject(RenderObject newObject, bool render, bool physics, bool particle, bool collision)
+    public void AddObject(RenderObject newObject, bool physics, bool particle)
     {
-        if(render){ _renderObjects.Add(newObject);}
-        if(collision){_collisionObjects.Add(newObject);}
         if(physics){_physicsObjects.Add((PhysicsObject)newObject);}
         if(particle){_physicsParticles.Add((PhysicsParticle)newObject);}
     }
@@ -43,8 +44,9 @@ public class Game : GameWindow
         _shader = new Shader("Shaders/lighting.vert", "Shaders/lighting.frag");
         
         // Load world layout
-        Layouts.SoftBodyTest1(_physicsObjects, _physicsParticles, _shader);
         
+        Layouts.Test1(this, _shader);
+
         base.OnLoad();
     }
 
@@ -92,30 +94,76 @@ public class Game : GameWindow
 
         _camera.Move(input, (float)args.Time);
         
-        for (int i = 0; i < _physicsObjects.Count; i++)
+        if (input.IsKeyDown(Keys.R)) // Playback Recording if "p" pressed
         {
-            if (input.IsKeyDown(Keys.U)) // Lift SoftBodies if "u" pressed
+            _recording = false;
+            _frameCounter = 0;
+        }
+
+        if (_recording)
+        {
+            for (int i = 0; i < _physicsObjects.Count; i++)
             {
-                for (uint j = 0; j < _physicsObjects[i]._vertexLookup.Count; j++)
+                if (input.IsKeyDown(Keys.U)) // Lift SoftBodies if "u" pressed
                 {
-                    var vertex = _physicsObjects[i]._vertexLookup[j];
-                    vertex.Speed += Vector3d.UnitY/6;
-                    _physicsObjects[i]._vertexLookup[j] = vertex;
+                    for (uint j = 0; j < _physicsObjects[i]._vertexLookup.Count; j++)
+                    {
+                        var vertex = _physicsObjects[i]._vertexLookup[j];
+                        vertex.Speed += Vector3d.UnitY / 6;
+                        _physicsObjects[i]._vertexLookup[j] = vertex;
+                    }
                 }
+                
+                // Update all physics objects
+                _physicsObjects[i].Update(0.00625);
             }
-            // Update all physics objects
-            _physicsObjects[i].Update(args.Time);
+            
+            // Update all physics particles
+            for (int i = 0; i < _physicsParticles.Count; i++)
+            {
+                var taskNum = i;
+                ThreadPool.QueueUserWorkItem(c => _physicsParticles[taskNum].Update(0.00625));
+            }
+
+            while (ThreadPool.PendingWorkItemCount != 0)
+            {
+                    
+            }
+
+            // Resolve Object Collisions
+            Collision.ResolveParticleCollision(_physicsParticles);
+            Collision.ResolveSoftBodyCollision(_physicsObjects);
+
+            _frames.Add(new Tuple<List<double[][]>, List<double[]>>(new List<double[][]>(capacity:_physicsObjects.Count), new List<double[]>(capacity:_physicsParticles.Count)));
+            for (int i = 0; i < _physicsObjects.Count; i++)
+            {
+                _frames[_frameCounter].Item1.Add(new List<double[]>(_physicsObjects[i].Vertices).ToArray());
+            }
+            for (int i = 0; i < _physicsParticles.Count; i++)
+            {
+                _frames[_frameCounter].Item2.Add(new List<double>() {_physicsParticles[i].Position.X, _physicsParticles[i].Position.Y, _physicsParticles[i].Position.Z}.ToArray());
+            }
+            _frameCounter ++;
         }
-        
-        // Update all physics particles
-        for (int i = 0; i < _physicsParticles.Count; i++)
+        else
         {
-            var taskNum = i;
-            _physicsParticles[taskNum].Update(_physicsParticles, args.Time);
+            if (input.IsKeyDown(Keys.R)) // Playback Recording if "r" pressed
+            {
+                _frameCounter = 0;
+            }
+            if (_frameCounter < _frames.Count - 1)
+            {
+                for (int i = 0; i < _physicsObjects.Count; i++)
+                {
+                    _physicsObjects[i].Assign(_frames[_frameCounter].Item1[i]);
+                }
+                for (int i = 0; i < _physicsParticles.Count; i++)
+                {
+                    _physicsParticles[i].Assign(_frames[_frameCounter].Item2[i]);
+                }
+                _frameCounter++;
+            }
         }
-        // Resolve Object Collisions
-        Collision.ResolveParticleCollision(_physicsParticles);
-        Collision.ResolveSoftBodyCollision(_physicsObjects);
         base.OnUpdateFrame(args);
     }
     protected override void OnRenderFrame(FrameEventArgs args)
@@ -135,7 +183,6 @@ public class Game : GameWindow
         }
         
         Context.SwapBuffers();
-        
         base.OnRenderFrame(args);
     }
 }
