@@ -30,7 +30,7 @@ public static class Layouts
         }
 
         var rand = new Random();
-        for (var i = 0; i < 100; i++) // Add Particles
+        for (var i = 0; i < 2000; i++) // Add Particles
         {
             game.AddObject(new PhysicsParticle(new Vector3d(
                 (rand.NextDouble()-0.5)*10+20, 
@@ -53,7 +53,19 @@ public static class Layouts
         {
             game.AddObject(new SoftBody(SphereCache.GetSphere(2, new Vector3d(i%4, i*4+10, 0), 0.78), shader, Vector3d.Zero, 1, true, false));
         }
-        game.AddObject(new SoftBody(SphereCache.GetSphere(1, new Vector3d(5, 10, 8), 0.78), shader, new Vector3d(-10,0,0), 1, false, false));
-        game.AddObject(new SoftBody(SphereCache.GetSphere(1, new Vector3d(-5, 10, 8), 0.78), shader, new Vector3d(0,0,0), 1, false, false));
+        game.AddObject(new RigidBody(new RectPrism(
+                new Vector3d(-5,10,0), 
+                2, 
+                2, 
+                2, 
+                Quaterniond.FromEulerAngles(0, 0, 0)), 
+            shader, Vector3d.UnitX, 1, false));
+        game.AddObject(new RigidBody(new RectPrism(
+                new Vector3d(5,10,0), 
+                2, 
+                2, 
+                2, 
+                Quaterniond.FromEulerAngles(0, 0, 0)), 
+            shader, -Vector3d.UnitX, 1, false));
     }
 }

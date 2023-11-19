@@ -19,6 +19,7 @@ public static class SphereCache
         sphere = new Icosphere(_sphereCache[recursion]);
 
         sphere.Center = position;
+        sphere.Radius = size;
         for (int i = 0; i < sphere.Vertices.Length; i++)  // Applies position offset before returning
         {
             var vertex = sphere.Vertices[i];

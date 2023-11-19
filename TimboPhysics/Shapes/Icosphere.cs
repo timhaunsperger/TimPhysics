@@ -27,6 +27,7 @@ public class Icosphere : Shape
     public Icosphere(Icosphere sphere)//Cloning Constructor
     {
         Center = new Vector3d(sphere.Center);
+        Radius = sphere.Radius;
         Vertices = new double[sphere.Vertices.Length][];
         for (int i = 0; i < sphere.Vertices.Length; i++)
         {

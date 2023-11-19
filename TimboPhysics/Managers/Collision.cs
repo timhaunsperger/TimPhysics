@@ -131,11 +131,8 @@ public static class Collision
     }
 
 
-    public static void SoftStaticCollisionResolver(PhysicsObject[] colliders)
+    public static void SoftStaticCollisionResolver(SoftBody colliderSoft, StaticBody colliderStatic)
     {
-        StaticBody colliderStatic = (StaticBody)(colliders[0].GetType() == typeof(StaticBody) ? colliders[0] : colliders[1]);
-        SoftBody colliderSoft = (SoftBody)(colliders[0].GetType() == typeof(SoftBody) ? colliders[0] : colliders[1]);
-        
         foreach (var vertex in colliderSoft._vertexLookup)
         {
             var collidingVertex = colliderSoft._vertexLookup[vertex.Key];
@@ -191,36 +188,31 @@ public static class Collision
         }
     }
 
-    public static void ResolveSoftBodyCollision(List<PhysicsObject> collisionObjects)
+    public static void ResolveSoftBodyCollision(List<SoftBody> softBodies, List<PhysicsObject> staticBodies)
     {
         // Loop through all objects, looking for colliding pairs
-        var collisionPairs = new List<PhysicsObject[]>();
-        for (int i = 0; i < collisionObjects.Count; i++)
+        for (int i = 0; i < softBodies.Count; i++)
         {
             // Loop through all potential pairings after an that object in the list, preventing duplicates
-            for (int j = i+1; j < collisionObjects.Count; j++)
+            for (int j = i+1; j < softBodies.Count; j++)
             {
-                if (collisionObjects[i].GetType() == typeof(StaticBody) && collisionObjects[j].GetType() == typeof(StaticBody)) { continue; }
-                var objDist = (collisionObjects[i].Position - collisionObjects[j].Position).Length;
-                var sumRadius = collisionObjects[i].Radius + collisionObjects[j].Radius;
+                var objDist = (softBodies[i].Position - softBodies[j].Position).Length;
+                var sumRadius = softBodies[i].Radius + softBodies[j].Radius;
                 if (objDist < sumRadius)
                 {
-                    collisionPairs.Add(new []{collisionObjects[i], collisionObjects[j]});
+                    SoftBodyCollisionResolver(softBodies[i], softBodies[j]);
+                    SoftBodyCollisionResolver(softBodies[j], softBodies[i]);
                 }
             }
         }
-        foreach (var collisionPair in collisionPairs)
-        {
-            if (collisionPair[0].GetType() == typeof(StaticBody) || collisionPair[1].GetType() == typeof(StaticBody)) 
-            {
-                SoftStaticCollisionResolver(collisionPair);
-                continue;
-            }
 
-            var c1 = (SoftBody)collisionPair[0];
-            var c2 = (SoftBody)collisionPair[1];
-            SoftBodyCollisionResolver(c1, c2);
-            SoftBodyCollisionResolver(c2, c1);
+        for (int i = 0; i < staticBodies.Count; i++)
+        {
+            for (int j = 0; j < softBodies.Count; j++)
+            {
+                SoftStaticCollisionResolver(softBodies[j], (StaticBody)staticBodies[i]);
+            }
         }
+
     }
 }

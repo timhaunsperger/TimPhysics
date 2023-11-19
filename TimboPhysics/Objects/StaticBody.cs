@@ -17,6 +17,9 @@ public class StaticBody : PhysicsObject
             {
                 Radius = (VertexPos[i] - Position).Length;
             }
+            _flattenedVertices[8*i+3] = Vertices[i][0] - Position.X;
+            _flattenedVertices[8*i+4] = Vertices[i][1] - Position.Y;
+            _flattenedVertices[8*i+5] = Vertices[i][2] - Position.Z;
         }
         
     }
