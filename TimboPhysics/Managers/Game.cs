@@ -11,9 +11,9 @@ namespace TimboPhysics;
 
 public class Game : GameWindow
 {
-    private volatile List<RenderObject> _renderObjects = new ();
-    private volatile List<PhysicsObject> _physicsObjects = new ();
-    private volatile List<PhysicsParticle> _physicsParticles = new ();
+    private List<RenderObject> _renderObjects = new ();
+    private List<PhysicsObject> _physicsObjects = new ();
+    private List<PhysicsParticle> _physicsParticles = new ();
     private Shader _shader;
     private float _AspectRatio = 1;
     private Camera _camera;
@@ -29,10 +29,16 @@ public class Game : GameWindow
         CursorGrabbed = true;
     }
 
-    public void AddObject(RenderObject newObject, bool physics, bool particle)
+    public void AddObject(PhysicsObject newObject)
     {
-        if(physics){_physicsObjects.Add((PhysicsObject)newObject);}
-        if(particle){_physicsParticles.Add((PhysicsParticle)newObject);}
+        if (newObject.GetType() == typeof(PhysicsParticle))
+        {
+            _physicsParticles.Add((PhysicsParticle)newObject);
+        }
+        else
+        {
+            _physicsObjects.Add(newObject);
+        }
     }
     
     protected override void OnLoad()
@@ -92,7 +98,7 @@ public class Game : GameWindow
             throw new Exception("closing program");
         }
 
-        _camera.Move(input, (float)args.Time);
+        _camera.Move(input, 0.025f);
         
         if (input.IsKeyDown(Keys.R)) // Playback Recording if "p" pressed
         {
@@ -104,25 +110,26 @@ public class Game : GameWindow
         {
             for (int i = 0; i < _physicsObjects.Count; i++)
             {
-                if (input.IsKeyDown(Keys.U)) // Lift SoftBodies if "u" pressed
+                if (input.IsKeyDown(Keys.U) && _physicsObjects.GetType() == typeof(SoftBody)) // Lift SoftBodies if "u" pressed
                 {
-                    for (uint j = 0; j < _physicsObjects[i]._vertexLookup.Count; j++)
+                    var obj = (SoftBody)_physicsObjects[i];
+                    for (uint j = 0; j < obj._vertexLookup.Count; j++)
                     {
-                        var vertex = _physicsObjects[i]._vertexLookup[j];
+                        var vertex = obj._vertexLookup[j];
                         vertex.Speed += Vector3d.UnitY / 6;
-                        _physicsObjects[i]._vertexLookup[j] = vertex;
+                        obj._vertexLookup[j] = vertex;
                     }
+                    // Update all softbodies
                 }
                 
-                // Update all physics objects
-                _physicsObjects[i].Update(0.00625);
+                _physicsObjects[i].Update(0.005);
             }
             
             // Update all physics particles
             for (int i = 0; i < _physicsParticles.Count; i++)
             {
                 var taskNum = i;
-                ThreadPool.QueueUserWorkItem(c => _physicsParticles[taskNum].Update(0.00625));
+                ThreadPool.QueueUserWorkItem(c => _physicsParticles[taskNum].Update(0.005));
             }
 
             while (ThreadPool.PendingWorkItemCount != 0)

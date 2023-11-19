@@ -18,11 +18,13 @@ public static class SphereCache
         }
         sphere = new Icosphere(_sphereCache[recursion]);
 
+        sphere.Center = position;
         for (int i = 0; i < sphere.Vertices.Length; i++)  // Applies position offset before returning
         {
-            sphere.Vertices[i][0] = sphere.Vertices[i][0] * size + position.X;
-            sphere.Vertices[i][1] = sphere.Vertices[i][1] * size + position.Y;
-            sphere.Vertices[i][2] = sphere.Vertices[i][2] * size + position.Z;
+            var vertex = sphere.Vertices[i];
+            vertex[0] = vertex[0] * size + position.X;
+            vertex[1] = vertex[1] * size + position.Y;
+            vertex[2] = vertex[2] * size + position.Z;
         }
         return sphere;
     }

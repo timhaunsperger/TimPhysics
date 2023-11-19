@@ -6,6 +6,7 @@ public class RectPrism : Shape
 {
     public RectPrism(Vector3d offset, double width, double height, double depth, Quaterniond rotation)
     {
+        Center = offset;
         _baseIndices = new uint[]{  // Faces of basic cube
             2, 1, 0,
             0, 3, 2,

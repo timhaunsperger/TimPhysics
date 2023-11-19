@@ -8,6 +8,7 @@ public class Shape
     protected uint[] _baseIndices;
     public double[][] Vertices;
     public uint[] Indices;
+    public Vector3d Center = Vector3d.Zero;
     
     
     private static Vector2d GetSphereCoord(Vector3d i) // Approximates texture vertex data based on sphere coords
