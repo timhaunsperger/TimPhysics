@@ -12,7 +12,7 @@ public static class TMathUtils
     public static Vector3d GetNormal(Vector3d p0, Vector3d p1, Vector3d p2)
     {
         var invNormal = Vector3d.Cross(p1 - p0, p2 - p0);
-        invNormal.NormalizeFast();
+        invNormal.Normalize();
         return invNormal * -1;
     }
     
@@ -34,6 +34,16 @@ public static class TMathUtils
     {
         var normal = GetNormal(p0, p1, p2);
         return Vector3d.Dot(p0 - point, normal);
+    }
+    public static Vector3d PointPlaneVect(Vector3d p0, Vector3d p1, Vector3d p2, Vector3d point)
+    {
+        var normal = GetNormal(p0, p1, p2);
+        return Vector3d.Dot(p0 - point, normal) * normal;
+    }
+    public static Vector3d LinearVelocity(Vector3d rotAxis, Vector3d offset, double angVelocity)
+    {
+        var rad  = Vector3d.Dot(offset, rotAxis) * rotAxis - offset;
+        return Vector3d.Cross(offset, rotAxis).Normalized() * angVelocity * rad.Length;
     }
     
     public static double[] Flatten(double[][] inp)

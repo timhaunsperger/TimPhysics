@@ -20,16 +20,15 @@ public class SoftBody : PhysicsObject
             var vertexPos = new Vector3d(shape.Vertices[indices[i]][0], shape.Vertices[indices[i]][1],
                 shape.Vertices[indices[i]][2]);
             _vertexLookup[indices[i]] =
-                new PhysicsVertex(vertexPos, velocity, mass / indices.Length, vertexPos - Position);
+                new PhysicsVertex(vertexPos, velocity, vertexPos - Position);
         }
     }
 
-    public struct PhysicsVertex(Vector3d position, Vector3d speed, double mass, Vector3d initialOffset)
+    public struct PhysicsVertex(Vector3d position, Vector3d speed, Vector3d initialOffset)
     {
         public Vector3d Position = position;
         public Vector3d InitialOffset = initialOffset;
         public Vector3d Speed = speed;
-        public double Mass = mass;
     }
 
     private Dictionary<uint, PhysicsVertex> NextPositions(Dictionary<uint, PhysicsVertex> Vertices, double timeStep)
@@ -37,11 +36,11 @@ public class SoftBody : PhysicsObject
         // Clone input dictionary because dict is reference type
         Vertices = new Dictionary<uint, PhysicsVertex>(Vertices);
 
-        const double springConst = 4000;
+        const double springConst = 300;
         const double springOffset = 0.1;
-        const double dampingFactor = 0.1;
+        const double dampingFactor = 1;
         const double pressure = 2000;
-        const double gravity = 20;
+        const double gravity = 0.5;
 
         for (uint i = 0; i < Vertices.Count; i++)
         {
@@ -61,9 +60,12 @@ public class SoftBody : PhysicsObject
                     var vertex2 = Vertices[j];
                     
                     // Apply Damping Force
-                    var relSpeed = vertex1.Speed - vertex2.Speed;
-                    vertex1.Speed -= relSpeed * dampingFactor * timeStep;
-                    vertex2.Speed += relSpeed * dampingFactor * timeStep;
+                    if ((vertex1.Position - vertex2.Position).LengthSquared < 0.1)
+                    {
+                        var relSpeed = vertex1.Speed - vertex2.Speed;
+                        vertex1.Speed -= relSpeed * dampingFactor * timeStep;
+                        vertex2.Speed += relSpeed * dampingFactor * timeStep;
+                    }
                     
                     //Apply Spring Force
                     var springVector = vertex1.Position - vertex2.Position;
@@ -133,7 +135,7 @@ public class SoftBody : PhysicsObject
         return Vertices;
     }
 
-    protected override void UpdateValues(double deltaTime)
+    private void UpdateValues(double deltaTime)
     {
         var vertexPosSum = Vector3d.Zero;
         Radius = 0d;

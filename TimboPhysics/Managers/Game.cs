@@ -138,17 +138,14 @@ public class Game : GameWindow
             for (int i = 0; i < _objects.Count; i++)
             {
                 var taskNum = i;
-                ThreadPool.QueueUserWorkItem(c => _objects[taskNum].Update(0.005));
+                _objects[taskNum].Update(0.005);
             }
 
-            while (ThreadPool.PendingWorkItemCount != 0)
-            {
-                
-            }
 
             // Resolve Object Collisions
             Collision.ResolveParticleCollision(_particles);
             Collision.ResolveSoftBodyCollision(_softObjects, _staticObjects);
+            Collision.ResolveRigidBodyCollision(_hardObjects);
 
             if (_doRecording)
             {

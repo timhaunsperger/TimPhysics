@@ -62,7 +62,7 @@ public static class Collision
             var collidingVertex = vertex.Value; 
             
             // Bypass checks if vertex too far from object to collide
-            if ((collider2.Position - vertex.Value.Position).Length > collider2.Radius)
+            if ((collider2.Position - vertex.Value.Position).LengthSquared > collider2.Radius * collider2.Radius)
             {
                 continue;
             }
@@ -104,7 +104,7 @@ public static class Collision
                     faceVelocity += collider2._vertexLookup[closestFace[i]].Speed / 3;
                 }
                 var relVelocity = Vector3d.Dot(collidingVertex.Speed - faceVelocity, collisionVector) * collisionVector;
-                
+
                 // resolves pos and vel
                 if (Vector3d.Dot(relVelocity, collisionVector) < 0)
                 {
@@ -179,7 +179,7 @@ public static class Collision
                 if (Vector3d.Dot(collidingVertex.Speed, collisionVector) < 0)
                 {
                     collidingVertex.Speed -= 2 * Vector3d.Dot(collidingVertex.Speed, collisionVector) * collisionVector;
-                    collidingVertex.Speed *= 0.98; // friction
+                    collidingVertex.Speed *= 0.9; // friction
                 }
                 
                 // save changes to output
@@ -214,5 +214,168 @@ public static class Collision
             }
         }
 
+    }
+    // returns vertices colliding, closest face, and face dist
+    private static List<Tuple<uint, uint[], double>> CollidingVertices(Vector3d[] vertices, PhysicsObject obj)
+    {
+        var objVertices = obj.GetVertices();
+        var collidingVertices = new List<Tuple<uint, uint[], double>>();
+        for (uint i = 0; i < vertices.Length; i++)
+        {
+            if ((vertices[i] - obj.Position).Length > obj.Radius)
+            {
+                continue;
+            }
+            
+            var isColliding = true;
+            var closestFaceDist = Double.PositiveInfinity;
+            var closestFace = Array.Empty<uint>();
+            foreach (var face in obj.Faces)
+            {
+                var distance = TMathUtils.PointPlaneDist(
+                    objVertices[face[0]],
+                    objVertices[face[1]],
+                    objVertices[face[2]],
+                    vertices[i]);
+                if (distance < 0)
+                {
+                    isColliding = false;
+                    break;
+                }
+                
+                // Finds closest face in other object to the vertex
+                if (distance < closestFaceDist)
+                {
+                    closestFaceDist = distance;
+                    closestFace = face;
+                }
+            }
+
+            if (isColliding)
+            {
+                var vertex = new Tuple<uint, uint[], double>(i, closestFace, closestFaceDist);
+                collidingVertices.Add(vertex);
+            }
+        }
+
+        return collidingVertices;
+    }
+    public static double CollisionImpulse(double mass1, double mass2, double inertia1, double inertia2, Vector3d colRad1, Vector3d colRad2, Vector3d relVel, Vector3d normal)
+    {
+        var num = -2 * Vector3d.Dot(relVel, normal);
+        var den = 1 / mass1 + 1 / mass2 +
+                    Vector3d.Dot(
+                        Vector3d.Cross(colRad1, normal) / inertia1 + Vector3d.Cross(colRad2, normal) / inertia2,
+                        normal);
+        return num / den;
+    }
+    public static void RigidBodyCollisionResolver(RigidBody c1, RigidBody c2)
+    {
+        var vertices1 = c1.GetVertices();
+        var vertices2 = c2.GetVertices();
+            
+        var cVertices1 = CollidingVertices(vertices1, c2);
+        var cVertices2 = CollidingVertices(vertices2, c1);
+
+        if (cVertices1.Count == 0 && cVertices2.Count == 0)
+        {
+            return;
+        }
+        
+        // get collision point
+        var cPoint = Vector3d.Zero;
+        uint deepestPointId = 0;
+        double deepestPointDepth = double.PositiveInfinity;
+        uint[] deepestPointCollidedFace = Array.Empty<uint>();
+        int deepestPointColObj = 0;
+        foreach (var vtx in cVertices1)
+        {
+            cPoint += vertices1[vtx.Item1];
+            if (vtx.Item3 < deepestPointDepth)
+            {
+                deepestPointDepth = vtx.Item3;
+                deepestPointCollidedFace = vtx.Item2;
+                deepestPointColObj = 2;
+            }
+        }
+        foreach (var vtx in cVertices2)
+        {
+            cPoint += vertices2[vtx.Item1];
+            if (vtx.Item3 < deepestPointDepth)
+            {
+                deepestPointDepth = vtx.Item3;
+                deepestPointCollidedFace = vtx.Item2;
+                deepestPointColObj = 1;
+            }
+        }
+        cPoint /= cVertices1.Count + cVertices2.Count;
+        // get rel vel at colision point
+        var cPtVel1 = c1.Velocity + TMathUtils.LinearVelocity(c1.rotAxis, cPoint - c1.Position, c1.AngVelocity);
+        var cPtVel2 = c2.Velocity + TMathUtils.LinearVelocity(c2.rotAxis, cPoint - c2.Position, c2.AngVelocity);
+        var relVel = cPtVel1 - cPtVel2;
+        // get collision normal
+        var normal = Vector3d.Zero;
+        var faceCompare = 0d;
+        if (deepestPointColObj == 1)
+        {
+            for (int i = 0; i < c1.Faces.Length; i++)
+            {
+                var faceNormal = TMathUtils.GetNormal(vertices2[deepestPointCollidedFace[0]],
+                    vertices2[deepestPointCollidedFace[1]], vertices2[deepestPointCollidedFace[2]]);
+                var dot = Vector3d.Dot(faceNormal, relVel);
+                if (faceCompare > dot)
+                {
+                    faceCompare = dot;
+                    normal = faceNormal;
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < c1.Faces.Length; i++)
+            {
+                var faceNormal = TMathUtils.GetNormal(vertices1[deepestPointCollidedFace[0]],
+                    vertices1[deepestPointCollidedFace[1]], vertices1[deepestPointCollidedFace[2]]);
+                var dot = Vector3d.Dot(faceNormal, relVel);
+                if (faceCompare > dot)
+                {
+                    faceCompare = dot;
+                    normal = faceNormal;
+                }
+            }
+        }
+        var impulse = CollisionImpulse(c1.Mass, c2.Mass, c1.Inertia, c2.Inertia, cPoint - c1.Position,
+            cPoint - c2.Position, relVel, normal);
+
+        if (Vector3d.Dot(normal, (cPoint-c1.Position)) > 0)
+        {
+            c1.Velocity -= normal * impulse / c1.Mass;
+            c2.Velocity += normal * impulse / c2.Mass;
+        }
+        else
+        {
+            c1.Velocity += normal * impulse / c1.Mass;
+            c2.Velocity -= normal * impulse / c2.Mass;
+        }
+        
+        
+    }
+    
+    public static void ResolveRigidBodyCollision(List<RigidBody> rigidBodies)
+    {
+        // Loop through all objects, looking for colliding pairs
+        for (int i = 0; i < rigidBodies.Count; i++)
+        {
+            // Loop through all potential pairings after an that object in the list, preventing duplicates
+            for (int j = i+1; j < rigidBodies.Count; j++)
+            {
+                var objDist = (rigidBodies[i].Position - rigidBodies[j].Position).Length;
+                var sumRadius = rigidBodies[i].Radius + rigidBodies[j].Radius;
+                if (objDist < sumRadius)
+                {
+                    RigidBodyCollisionResolver(rigidBodies[i], rigidBodies[j]);
+                }
+            }
+        }
     }
 }

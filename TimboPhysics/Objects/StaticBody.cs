@@ -21,6 +21,10 @@ public class StaticBody : PhysicsObject
             _flattenedVertices[8*i+4] = Vertices[i][1] - Position.Y;
             _flattenedVertices[8*i+5] = Vertices[i][2] - Position.Z;
         }
-        
+    }
+
+    public override Vector3d[] GetVertices()
+    {
+        return VertexPos;
     }
 }

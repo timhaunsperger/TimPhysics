@@ -21,7 +21,7 @@ public static class Layouts
         {
             game.AddObject(new StaticBody(
                 new RectPrism(
-                    new Vector3d(i%2*10-5,i*6-10,0),
+                    new Vector3d(i%2*12-5,i*8-10,0),
                     10, 
                     0.25, 
                     5, 
@@ -29,43 +29,30 @@ public static class Layouts
                 shader));
         }
 
-        var rand = new Random();
-        for (var i = 0; i < 2000; i++) // Add Particles
-        {
-            game.AddObject(new PhysicsParticle(new Vector3d(
-                (rand.NextDouble()-0.5)*10+20, 
-                (rand.NextDouble()-0.5)*1 + 20, 
-                (rand.NextDouble()-0.5)*10), (i % 2 + 1)* 0 + 0.2, 1, shader, Vector3d.Zero, false));
-        }
-        game.AddObject(new PhysicsParticle(new Vector3d( 20,60,0), 4, 2, shader, new Vector3d(0,-40,0), false));
-        game.AddObject(new PhysicsParticle(new Vector3d( 20,-20,0), 4, 2, shader, new Vector3d(0,40,0), false));
-        
-         for (var i = 0; i < 500; i++) // Add Particles
-         {
-             game.AddObject(new PhysicsParticle(new Vector3d(
-                 (rand.NextDouble()-0.5)*10-20, 
-                 rand.NextDouble()*10, 
-                 (rand.NextDouble()-0.5)*10), 1 * 0.3, 1, shader, Vector3d.Zero, true));
-         }
+        // var rand = new Random();
+        // for (var i = 0; i < 1000; i++) // Add Particles
+        // {
+        //     game.AddObject(new PhysicsParticle(new Vector3d(
+        //         (rand.NextDouble()-0.5)*10+20, 
+        //         (rand.NextDouble()-0.5)*1 + 20, 
+        //         (rand.NextDouble()-0.5)*10), (i % 2 + 1)* 0 + 0.2, 1, shader, Vector3d.Zero, false));
+        // }
+        // game.AddObject(new PhysicsParticle(new Vector3d( 20,60,0), 4, 2, shader, new Vector3d(0,-40,0), false));
+        // game.AddObject(new PhysicsParticle(new Vector3d( 20,-20,0), 4, 2, shader, new Vector3d(0,40,0), false));
+        //
+        //  for (var i = 0; i < 500; i++) // Add Particles
+        //  {
+        //      game.AddObject(new PhysicsParticle(new Vector3d(
+        //          (rand.NextDouble()-0.5)*10-20, 
+        //          rand.NextDouble()*10, 
+        //          (rand.NextDouble()-0.5)*10), 1 * 0.3, 1, shader, Vector3d.Zero, true));
+        //  }
         
         
         for (int i = 0; i < 4; i++) // Add SoftBodies
         {
-            game.AddObject(new SoftBody(SphereCache.GetSphere(2, new Vector3d(i%4, i*4+10, 0), 0.78), shader, Vector3d.Zero, 1, true, false));
+            game.AddObject(new SoftBody(SphereCache.GetSphere(2, new Vector3d(i%4, i*3+10, 0), 1), shader, Vector3d.Zero, 1, true, false));
         }
-        game.AddObject(new RigidBody(new RectPrism(
-                new Vector3d(-5,10,0), 
-                2, 
-                2, 
-                2, 
-                Quaterniond.FromEulerAngles(0, 0, 0)), 
-            shader, Vector3d.UnitX, 1, false));
-        game.AddObject(new RigidBody(new RectPrism(
-                new Vector3d(5,10,0), 
-                2, 
-                2, 
-                2, 
-                Quaterniond.FromEulerAngles(0, 0, 0)), 
-            shader, -Vector3d.UnitX, 1, false));
+        // game.AddObjr3d.UnitX*9.899, 1, false));
     }
 }

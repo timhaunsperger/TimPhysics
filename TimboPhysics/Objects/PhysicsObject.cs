@@ -31,8 +31,14 @@ public class PhysicsObject : RenderObject
             }
         }
     }
-
-    //Adds speed to position and calculates new max radius and center
-    protected virtual void UpdateValues(double timeStep)
-    { }
+    public virtual Vector3d[] GetVertices()
+    {
+        var vertices = new Vector3d[Vertices.Length];
+        for (int i = 0; i < Vertices.Length; i++)
+        {
+            vertices[i] = new Vector3d(Vertices[i][0], Vertices[i][1], Vertices[i][2]);
+        }
+        return vertices;
+        
+    }
 }

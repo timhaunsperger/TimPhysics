@@ -21,13 +21,10 @@ public class PhysicsParticle : PhysicsObject
         for (int i = 0; i < Vertices.Length; i++)
         {
             _vertexOffsets[i] = new Vector3d (Vertices[i][0], Vertices[i][1], Vertices[i][2] ) - position;
-            _flattenedVertices[8*i+3] = _vertexOffsets[i].X;
-            _flattenedVertices[8*i+4] = _vertexOffsets[i].Y;
-            _flattenedVertices[8*i+5] = _vertexOffsets[i].Z;
         }
     }
 
-    private void NextPositions(double deltaTime)
+    private void NextPosition(double deltaTime)
     {
         
         if (_gravity)
@@ -53,7 +50,6 @@ public class PhysicsParticle : PhysicsObject
             Velocity.Y -= 2 * Velocity.Y;
         }
         
-        
         Position += Velocity * deltaTime;
     }
     
@@ -70,7 +66,7 @@ public class PhysicsParticle : PhysicsObject
     
     public override void Update(double deltaTime)
     {
-        NextPositions(deltaTime);
+        NextPosition(deltaTime);
 
         // Updates values in vertex array
         for (uint i = 0; i < Vertices.Length; i++)
