@@ -284,78 +284,104 @@ public static class Collision
         
         // get collision point
         var cPoint = Vector3d.Zero;
-        uint deepestPointId = 0;
-        double deepestPointDepth = double.PositiveInfinity;
-        uint[] deepestPointCollidedFace = Array.Empty<uint>();
-        int deepestPointColObj = 0;
         foreach (var vtx in cVertices1)
         {
             cPoint += vertices1[vtx.Item1];
-            if (vtx.Item3 < deepestPointDepth)
-            {
-                deepestPointDepth = vtx.Item3;
-                deepestPointCollidedFace = vtx.Item2;
-                deepestPointColObj = 2;
-            }
         }
         foreach (var vtx in cVertices2)
         {
             cPoint += vertices2[vtx.Item1];
-            if (vtx.Item3 < deepestPointDepth)
-            {
-                deepestPointDepth = vtx.Item3;
-                deepestPointCollidedFace = vtx.Item2;
-                deepestPointColObj = 1;
-            }
         }
         cPoint /= cVertices1.Count + cVertices2.Count;
+        
+        // get collision radii
+        var rad1 = c1.Position - cPoint;
+        var rad2 = c2.Position - cPoint;
+        
         // get rel vel at colision point
-        var cPtVel1 = c1.Velocity + TMathUtils.LinearVelocity(c1.rotAxis, cPoint - c1.Position, c1.AngVelocity);
-        var cPtVel2 = c2.Velocity + TMathUtils.LinearVelocity(c2.rotAxis, cPoint - c2.Position, c2.AngVelocity);
+        var cPtVel1 = c1.Velocity + TMathUtils.LinearVelocity(c1.rotAxis, rad1, c1.AngVelocity);
+        var cPtVel2 = c2.Velocity + TMathUtils.LinearVelocity(c2.rotAxis, rad2, c2.AngVelocity);
         var relVel = cPtVel1 - cPtVel2;
         // get collision normal
-        var normal = Vector3d.Zero;
-        var faceCompare = 0d;
-        if (deepestPointColObj == 1)
+        Vector3d normal;
+        var faceCompare = double.PositiveInfinity;
+        var closestFace1Norm = Vector3d.Zero;
+        var closestFace2Norm = Vector3d.Zero;
+        
+        for (int i = 0; i < c1.Faces.Length; i++)
         {
-            for (int i = 0; i < c1.Faces.Length; i++)
+            var faceDist = TMathUtils.PointPlaneDist(vertices1[c1.Faces[i][0]],
+                vertices1[c1.Faces[i][1]], vertices1[c1.Faces[i][2]], cPoint);
+            if (faceCompare > faceDist)
             {
-                var faceNormal = TMathUtils.GetNormal(vertices2[deepestPointCollidedFace[0]],
-                    vertices2[deepestPointCollidedFace[1]], vertices2[deepestPointCollidedFace[2]]);
-                var dot = Vector3d.Dot(faceNormal, relVel);
-                if (faceCompare > dot)
-                {
-                    faceCompare = dot;
-                    normal = faceNormal;
-                }
+                faceCompare = faceDist;
+                closestFace1Norm =  TMathUtils.GetNormal(vertices1[c1.Faces[i][0]],
+                    vertices1[c1.Faces[i][1]], vertices1[c1.Faces[i][2]]);
             }
+        }
+        faceCompare = double.PositiveInfinity;
+        for (int i = 0; i < c2.Faces.Length; i++)
+        {
+            var faceDist = TMathUtils.PointPlaneDist(vertices2[c2.Faces[i][0]],
+                vertices2[c2.Faces[i][1]], vertices2[c2.Faces[i][2]], cPoint);
+            if (faceCompare > faceDist)
+            {
+                faceCompare = faceDist;
+                closestFace2Norm =  TMathUtils.GetNormal(vertices2[c2.Faces[i][0]],
+                    vertices2[c2.Faces[i][1]], vertices2[c2.Faces[i][2]]);
+            }
+        }
+        if (Math.Abs(Vector3d.Dot(closestFace1Norm, relVel)) > Math.Abs(Vector3d.Dot(closestFace2Norm, relVel)))
+        {
+            normal = closestFace1Norm;
+            Console.WriteLine("1");
         }
         else
         {
-            for (int i = 0; i < c1.Faces.Length; i++)
-            {
-                var faceNormal = TMathUtils.GetNormal(vertices1[deepestPointCollidedFace[0]],
-                    vertices1[deepestPointCollidedFace[1]], vertices1[deepestPointCollidedFace[2]]);
-                var dot = Vector3d.Dot(faceNormal, relVel);
-                if (faceCompare > dot)
-                {
-                    faceCompare = dot;
-                    normal = faceNormal;
-                }
-            }
+            normal = closestFace2Norm;
+            Console.WriteLine("2");
         }
-        var impulse = CollisionImpulse(c1.Mass, c2.Mass, c1.Inertia, c2.Inertia, cPoint - c1.Position,
-            cPoint - c2.Position, relVel, normal);
 
-        if (Vector3d.Dot(normal, (cPoint-c1.Position)) > 0)
+        if (Vector3d.Dot(relVel, normal) > 0)
         {
-            c1.Velocity -= normal * impulse / c1.Mass;
-            c2.Velocity += normal * impulse / c2.Mass;
+            normal *= -1;
         }
-        else
+        
+        Console.WriteLine(relVel);
+        
+        var impulse = CollisionImpulse(c1.Mass, c2.Mass, c1.Inertia, c2.Inertia, rad1,
+            rad2, relVel, normal);
+        var normRad1 = rad1.Normalized();
+        var normRad2 = rad2.Normalized();
+        
+        var rotAxis1 = Vector3d.Cross(normRad1, normal);
+        var rotAxis2 = Vector3d.Cross(normRad2, normal);
+        
+        var angularImpulse1 = impulse * rotAxis1 / c1.Inertia;
+        var angularImpulse2 = impulse * rotAxis2 / c2.Inertia;
+        
+        var linearImpulse1 = impulse * Vector3d.Dot(normRad1, normal) * normal / c1.Mass;
+        var linearImpulse2 = impulse * Vector3d.Dot(normRad2, normal) * normal / c2.Mass;
+        
+        if (Vector3d.Dot(relVel, normal) < 0)
         {
-            c1.Velocity += normal * impulse / c1.Mass;
-            c2.Velocity -= normal * impulse / c2.Mass;
+            // Console.WriteLine(relVel+ " " + angularImpulse1 + " " + linearImpulse1);
+            // Console.WriteLine(relVel + " " + angularImpulse2 + " " + linearImpulse2);
+            c1.Velocity += linearImpulse1 / c1.Mass;
+            c2.Velocity += linearImpulse2 / c2.Mass;
+            
+            var eVec1 = c1.rotAxis * c1.AngVelocity - angularImpulse1;
+            var eVec2 = c2.rotAxis * c2.AngVelocity + angularImpulse2;
+            if (eVec1 != Vector3d.Zero)
+            {
+                c1.rotAxis = eVec1.Normalized();
+                c1.AngVelocity = eVec1.Length;
+            }
+            if (eVec2 != Vector3d.Zero)
+            {
+                c2.rotAxis = eVec2.Normalized();
+                c2.AngVelocity = eVec2.Length;
+            }
         }
         
         

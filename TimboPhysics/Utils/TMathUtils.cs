@@ -35,11 +35,6 @@ public static class TMathUtils
         var normal = GetNormal(p0, p1, p2);
         return Vector3d.Dot(p0 - point, normal);
     }
-    public static Vector3d PointPlaneVect(Vector3d p0, Vector3d p1, Vector3d p2, Vector3d point)
-    {
-        var normal = GetNormal(p0, p1, p2);
-        return Vector3d.Dot(p0 - point, normal) * normal;
-    }
     public static Vector3d LinearVelocity(Vector3d rotAxis, Vector3d offset, double angVelocity)
     {
         var rad  = Vector3d.Dot(offset, rotAxis) * rotAxis - offset;

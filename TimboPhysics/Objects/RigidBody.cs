@@ -6,7 +6,7 @@ public class RigidBody : PhysicsObject
 {
     private bool _gravity;
     private Vector3d[] _vertexOffsets;
-    public double AngVelocity = 2;
+    public double AngVelocity = 10;
     public double Inertia = 1;
     public Vector3d rotAxis = Vector3d.UnitZ;
     
