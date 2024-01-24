@@ -4,5 +4,5 @@ Currently Supports:
   Rigid bodies,
   Soft bodies,
   Particles,
-  Static walls
+  Static walls.
 
