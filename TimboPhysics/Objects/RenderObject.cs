@@ -12,7 +12,7 @@ public class RenderObject
     protected int _VAO;
     protected int _VBO;
     private int _EBO;
-    private Texture _texture0;
+    protected Texture _texture0;
     private Texture _texture1;
 
     public RenderObject(Shape shape, Shader shader)
@@ -47,8 +47,7 @@ public class RenderObject
         GL.VertexAttribPointer(aTexCoordsLocation, 2, VertexAttribPointerType.Double, false, 8 * sizeof(double), 6 * sizeof(double));
         
         _shader.Use();
-        _texture0 = TextureCache.GetTexture("Textures/container.jpg");
-        _texture1 = TextureCache.GetTexture("Textures/garfield.png");
+        _texture0 = TextureCache.GetTexture("Textures/grid.png");
         _shader.SetInt("texture0", 0);
         _shader.SetInt("texture1", 1);
     }
@@ -65,7 +64,6 @@ public class RenderObject
         GL.BindVertexArray(_VAO);
         
         GL.BindBuffer(BufferTarget.ArrayBuffer, _VBO);
-        
         GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, _flattenedVertices.Length * sizeof(double), _flattenedVertices);
         
         _shader.SetMatrix4("view", view);
@@ -74,7 +72,7 @@ public class RenderObject
         _shader.Use();
         
         _texture0.Use(TextureUnit.Texture0);
-        _texture1.Use(TextureUnit.Texture1);
+        //_texture1.Use(TextureUnit.Texture1);
 
         GL.DrawElements(PrimitiveType.Triangles, _indices.Length, DrawElementsType.UnsignedInt, 0);
     }

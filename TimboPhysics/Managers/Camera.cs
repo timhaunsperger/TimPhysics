@@ -13,7 +13,7 @@ public class Camera
     private float _yaw = -MathHelper.PiOver2;
     private float _fov = MathHelper.PiOver2;
 
-    public float Speed = 10;
+    public float Speed = 1;
     public Vector3 Position;
     public float AspectRatio;
 
@@ -53,7 +53,7 @@ public class Camera
     
     public Matrix4 GetProjectionMatrix()
     {
-        return Matrix4.CreatePerspectiveFieldOfView(_fov, AspectRatio, 0.01f, 100f);
+        return Matrix4.CreatePerspectiveFieldOfView(_fov, AspectRatio, 0.01f, 1000f);
     }
 
     public void MouseMove(Vector2 delta)

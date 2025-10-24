@@ -6,7 +6,7 @@ public class RigidBody : PhysicsObject
 {
     private bool _gravity;
     private Vector3d[] _vertexOffsets;
-    public double AngVelocity = 10;
+    public double AngVelocity = 0;
     public double Inertia = 1;
     public Vector3d rotAxis = Vector3d.UnitZ;
     
@@ -27,19 +27,26 @@ public class RigidBody : PhysicsObject
         }
     }
 
+    // public override Vector3d[] GetVertices()
+    // {
+    //     
+    // }
+
     public override void Update(double deltaTime)
     {
         Position += Velocity * deltaTime;
+        if (_gravity)
+        {
+            Velocity -= Vector3d.UnitY;
+        }
         var rot = Quaterniond.FromAxisAngle(rotAxis, AngVelocity * deltaTime);
         for (int i = 0; i < _vertexOffsets.Length; i++)
         {
             _vertexOffsets[i] = rot * _vertexOffsets[i];
             var vertexPos = Position + _vertexOffsets[i];
-            Vertices[i][0] = vertexPos.X;
-            Vertices[i][1] = vertexPos.Y;
-            Vertices[i][2] = vertexPos.Z;
+            var fakeNormal = (vertexPos - Position).Normalized(); 
+            Vertices[i] = new[] {vertexPos.X, vertexPos.Y, vertexPos.Z, fakeNormal.X, fakeNormal.Y, fakeNormal.Z, Vertices[i][6], Vertices[i][7]};
         }
-
         _flattenedVertices = TMathUtils.Flatten(Vertices);
         base.Update(deltaTime);
     }

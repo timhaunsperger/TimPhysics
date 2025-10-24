@@ -12,7 +12,7 @@ public class SoftBody : PhysicsObject
         : base(shape, shader, mass)
     {
         _gravity = gravity;
-        _isBaloon = isBaloon;
+        _isBaloon = true;
         Position = shape.Center;
         var indices = shape.Indices;
         for (int i = 0; i < indices.Length; i++)
@@ -36,11 +36,11 @@ public class SoftBody : PhysicsObject
         // Clone input dictionary because dict is reference type
         Vertices = new Dictionary<uint, PhysicsVertex>(Vertices);
 
-        const double springConst = 300;
-        const double springOffset = 0.1;
-        const double dampingFactor = 1;
-        const double pressure = 2000;
-        const double gravity = 0.5;
+        const double springConst = 4000;
+        const double springOffset = 0.35;
+        const double dampingFactor = 2;
+        const double pressure = 4000;
+        const double gravity = 6;
 
         for (uint i = 0; i < Vertices.Count; i++)
         {
@@ -60,12 +60,9 @@ public class SoftBody : PhysicsObject
                     var vertex2 = Vertices[j];
                     
                     // Apply Damping Force
-                    if ((vertex1.Position - vertex2.Position).LengthSquared < 0.1)
-                    {
-                        var relSpeed = vertex1.Speed - vertex2.Speed;
-                        vertex1.Speed -= relSpeed * dampingFactor * timeStep;
-                        vertex2.Speed += relSpeed * dampingFactor * timeStep;
-                    }
+                    var relSpeed = vertex1.Speed - vertex2.Speed;
+                    vertex1.Speed -= relSpeed * dampingFactor * timeStep;
+                    vertex2.Speed += relSpeed * dampingFactor * timeStep;
                     
                     //Apply Spring Force
                     var springVector = vertex1.Position - vertex2.Position;

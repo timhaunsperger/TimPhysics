@@ -12,26 +12,21 @@ public class Shader
 
     public Shader(string vertexPath, string fragmentPath)
     {
-        string VertexShaderSource;
-        StreamReader vertReader = new StreamReader(vertexPath, Encoding.UTF8);
-        VertexShaderSource = vertReader.ReadToEnd();
-        
-        string FragmentShaderSource;
-        StreamReader fragReader = new StreamReader(fragmentPath, Encoding.UTF8);
-        FragmentShaderSource = fragReader.ReadToEnd();
+        string vertexShaderSource = File.ReadAllText(vertexPath);
+        string fragmentShaderSource = File.ReadAllText(fragmentPath);
         
         var VertexShader = GL.CreateShader(ShaderType.VertexShader);
-        GL.ShaderSource(VertexShader, VertexShaderSource);
+        GL.ShaderSource(VertexShader, vertexShaderSource);
         GL.CompileShader(VertexShader);
         string infoLogVert = GL.GetShaderInfoLog(VertexShader);
-        if (infoLogVert != System.String.Empty)
-            System.Console.WriteLine(infoLogVert);
+        if (infoLogVert != "")
+            Console.WriteLine(infoLogVert);
         
         var FragmentShader = GL.CreateShader(ShaderType.FragmentShader);
-        GL.ShaderSource(FragmentShader, FragmentShaderSource);
+        GL.ShaderSource(FragmentShader, fragmentShaderSource);
         GL.CompileShader(FragmentShader);
         string infoLogFrag = GL.GetShaderInfoLog(FragmentShader);
-        if (infoLogFrag != String.Empty)
+        if (infoLogFrag != "")
             Console.WriteLine(infoLogFrag);
         
         Handle = GL.CreateProgram();
@@ -103,7 +98,10 @@ public class Shader
 
     ~Shader()
     {
-        GL.DeleteProgram(Handle);
+        if (disposedValue == false)
+        {
+            Console.WriteLine("GPU Resource leak! Did you forget to call Dispose()?");
+        }
     }
 
 

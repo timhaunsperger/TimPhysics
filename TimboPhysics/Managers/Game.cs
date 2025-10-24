@@ -57,14 +57,14 @@ public class Game : GameWindow
     protected override void OnLoad()
     {
         GL.Enable(EnableCap.DepthTest);
-        GL.ClearColor(new Color4(0.2f,0.2f,1f,1f));
+        GL.ClearColor(new Color4(0.2f,0.5f,1f,1f));
         
         // Load lighting shader
         _shader = new Shader("Shaders/lighting.vert", "Shaders/lighting.frag");
         
         // Load world layout
         
-        Layouts.Test1(this, _shader);
+        Layouts.ActiveTest(this, _shader);
 
         base.OnLoad();
     }
@@ -111,7 +111,7 @@ public class Game : GameWindow
             throw new Exception("closing program");
         }
 
-        _camera.Move(input, 0.025f);
+        _camera.Move(input, 0.1f);
         
         if (input.IsKeyDown(Keys.R)) // Playback Recording if "p" pressed
         {
@@ -138,12 +138,12 @@ public class Game : GameWindow
             for (int i = 0; i < _objects.Count; i++)
             {
                 var taskNum = i;
-                _objects[taskNum].Update(0.005);
+                _objects[taskNum].Update(0.001);
             }
-
+            
 
             // Resolve Object Collisions
-            Collision.ResolveParticleCollision(_particles);
+            Collision.ResolveParticleCollision(_particles, _staticObjects);
             Collision.ResolveSoftBodyCollision(_softObjects, _staticObjects);
             Collision.ResolveRigidBodyCollision(_hardObjects);
 
