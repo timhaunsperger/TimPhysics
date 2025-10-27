@@ -36,11 +36,11 @@ public class SoftBody : PhysicsObject
         // Clone input dictionary because dict is reference type
         Vertices = new Dictionary<uint, PhysicsVertex>(Vertices);
 
-        const double springConst = 4000;
-        const double springOffset = 0.35;
-        const double dampingFactor = 2;
-        const double pressure = 4000;
-        const double gravity = 6;
+        const double springConst = 8000;
+        const double springOffset = 0.25;
+        const double dampingFactor = 10;
+        const double pressure = 16000;
+        const double gravity = 9.8;
 
         for (uint i = 0; i < Vertices.Count; i++)
         {
@@ -67,7 +67,7 @@ public class SoftBody : PhysicsObject
                     //Apply Spring Force
                     var springVector = vertex1.Position - vertex2.Position;
                     var initDist = (vertex2.InitialOffset - vertex1.InitialOffset).Length;
-                    var springForce = springVector.Normalized() * (springVector.Length - initDist) * springConst/10 * timeStep;
+                    var springForce = springVector.Normalized() *(Math.Pow(springVector.Length - initDist, 2)) * springConst/10 * timeStep;
                     vertex1.Speed -= springForce;
                     vertex2.Speed += springForce;
                     

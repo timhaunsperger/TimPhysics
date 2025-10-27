@@ -41,6 +41,12 @@
       <None Remove="Shapes\Icosphere6\vertices" />
       <None Remove="Shapes\Icosphere7\vertices" />
       <None Remove="Shapes\Icosphere7\indices" />
+      <None Update="Textures\grid.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Textures\blackgrid.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 

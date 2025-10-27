@@ -21,6 +21,7 @@ public class StaticBody : PhysicsObject
             _flattenedVertices[8*i+4] = Vertices[i][1] - Position.Y;
             _flattenedVertices[8*i+5] = Vertices[i][2] - Position.Z;
         }
+        base._texture0 = TextureCache.GetTexture("Textures/blackgrid.png");
     }
 
     public override Vector3d[] GetVertices()
